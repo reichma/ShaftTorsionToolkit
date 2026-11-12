@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shaft Torsion Toolkit</title>
+<meta name="description" content="User manual and technical reference for the Shaft Torsion Toolkit: STEP split and inertias, FEM torsional stiffness, torsional vibration model and animation.">
+<style>
+:root{
+  --bg:#fbfaf7; --surface:#ffffff; --surface-2:#f2f0ea; --text:#1d1f23; --muted:#5b616b;
+  --border:#dcd8cf; --accent:#2a5d8f; --accent-soft:#e3ecf5; --code-bg:#f2f0ea;
+  --warn:#8a5a00; --warn-bg:#fbf1dc; --ok:#2e6b3a;
+  --s1:#2a5d8f; --s2:#b4572e; --s3:#3b7d4f; --s4:#7a4e9c;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15171a; --surface:#1c1f23; --surface-2:#23272c; --text:#e6e4df; --muted:#a0a6ae;
+    --border:#33383f; --accent:#7fb0e0; --accent-soft:#1f2e3d; --code-bg:#23272c;
+    --warn:#e5b45a; --warn-bg:#2d2615; --ok:#7cc48c;
+    --s1:#7fb0e0; --s2:#e59a74; --s3:#86c99a; --s4:#bb98da;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15171a; --surface:#1c1f23; --surface-2:#23272c; --text:#e6e4df; --muted:#a0a6ae;
+  --border:#33383f; --accent:#7fb0e0; --accent-soft:#1f2e3d; --code-bg:#23272c;
+  --warn:#e5b45a; --warn-bg:#2d2615; --ok:#7cc48c;
+  --s1:#7fb0e0; --s2:#e59a74; --s3:#86c99a; --s4:#bb98da;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth; scroll-padding-top:16px}
+body{margin:0; background:var(--bg); color:var(--text);
+  font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;}
+code,pre,kbd{font-family:ui-monospace,"Cascadia Mono",Consolas,"SF Mono",Menlo,monospace; font-size:.9em}
+code{background:var(--code-bg); padding:.1em .35em; border-radius:4px}
+pre{background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:12px 14px;
+  overflow-x:auto; line-height:1.45}
+pre code{background:none; padding:0}
+a{color:var(--accent)}
+h1,h2,h3{line-height:1.25; text-wrap:balance}
+h1{font-size:2rem; margin:0 0 .3rem}
+h2{font-size:1.45rem; margin:3rem 0 .8rem; padding-top:.6rem; border-top:1px solid var(--border)}
+h3{font-size:1.1rem; margin:1.8rem 0 .5rem}
+p,li{max-width:72ch}
+.layout{display:grid; grid-template-columns:240px minmax(0,1fr); gap:40px; max-width:1180px; margin:0 auto; padding:32px 24px 80px}
+nav.toc{position:sticky; top:16px; align-self:start; max-height:calc(100vh - 32px); overflow:auto; font-size:.92rem}
+nav.toc .title{font-weight:600; margin-bottom:.4rem}
+nav.toc ol{list-style:none; padding:0; margin:0}
+nav.toc li{margin:0}
+nav.toc a{display:block; padding:3px 8px; border-radius:6px; color:var(--muted); text-decoration:none}
+nav.toc a:hover{background:var(--surface-2); color:var(--text)}
+nav.toc ol ol a{padding-left:20px; font-size:.88rem}
+header.hero{margin-bottom:1.5rem}
+.lede{font-size:1.1rem; color:var(--muted); max-width:66ch; margin:.2rem 0 0}
+.meta{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px}
+.pill{font-size:.8rem; border:1px solid var(--border); border-radius:999px; padding:2px 10px; color:var(--muted); background:var(--surface)}
+.themebtn{float:right; font:inherit; font-size:.85rem; background:var(--surface); color:var(--text);
+  border:1px solid var(--border); border-radius:8px; padding:4px 10px; cursor:pointer}
+table{border-collapse:collapse; width:100%; margin:.6rem 0 1rem; font-size:.93rem}
+.tablewrap{overflow-x:auto}
+th,td{border-bottom:1px solid var(--border); padding:7px 10px; text-align:left; vertical-align:top}
+th{background:var(--surface-2); font-weight:600}
+td.num,th.num{text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap}
+.note,.warn{border-left:4px solid var(--accent); background:var(--accent-soft); padding:10px 14px; border-radius:0 8px 8px 0; margin:1rem 0}
+.warn{border-color:var(--warn); background:var(--warn-bg)}
+.note p,.warn p{margin:.2rem 0}
+.steps{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin:1.2rem 0}
+.step{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 14px; border-top:4px solid var(--c)}
+.step b{display:block; margin-bottom:4px}
+.step span{color:var(--muted); font-size:.92rem}
+figure{margin:1.2rem 0}
+figure svg{width:100%; height:auto; display:block}
+figcaption{font-size:.88rem; color:var(--muted); margin-top:6px}
+.formula{font-family:"Cambria Math","STIX Two Math","Times New Roman",serif; font-size:1.08rem;
+  background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:10px 14px; margin:.8rem 0; overflow-x:auto}
+dl.params{display:grid; grid-template-columns:max-content 1fr; gap:4px 16px; margin:.6rem 0}
+dl.params dt{font-family:ui-monospace,Consolas,monospace; font-size:.9rem}
+dl.params dd{margin:0; color:var(--muted)}
+footer{margin-top:4rem; color:var(--muted); font-size:.85rem; border-top:1px solid var(--border); padding-top:1rem}
+@media (max-width:860px){
+  .layout{grid-template-columns:minmax(0,1fr); padding:20px 16px 60px; gap:16px}
+  nav.toc{position:static; max-height:none; border:1px solid var(--border); border-radius:10px; padding:10px; background:var(--surface)}
+  h1{font-size:1.6rem}
+  dl.params{grid-template-columns:1fr} dl.params dd{margin-bottom:6px}
+}
+@media print{
+  nav.toc,.themebtn{display:none}
+  .layout{display:block; max-width:none; padding:0}
+  h2{break-before:page}
+  body{background:#fff}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Contents">
+  <div class="title">Contents</div>
+  <ol>
+    <li><a href="#overview">1 Overview</a></li>
+    <li><a href="#install">2 Installation</a></li>
+    <li><a href="#quickstart">3 Quick start</a></li>
+    <li><a href="#gui">4 GUI reference</a>
+      <ol>
+        <li><a href="#tab-geometry">4.1 Geometry</a></li>
+        <li><a href="#tab-fem">4.2 FEM stiffness</a></li>
+        <li><a href="#tab-dynamics">4.3 Vibration model</a></li>
+        <li><a href="#tab-animation">4.4 Animation</a></li>
+        <li><a href="#file-menu">4.5 File menu</a></li>
+      </ol>
+    </li>
+    <li><a href="#theory">5 Theory</a>
+      <ol>
+        <li><a href="#th-axis">5.1 Shaft axis</a></li>
+        <li><a href="#th-inertia">5.2 Section inertias</a></li>
+        <li><a href="#th-fem">5.3 FEM model</a></li>
+        <li><a href="#th-stiffness">5.4 Stiffness extraction</a></li>
+        <li><a href="#th-dynamics">5.5 Vibration model</a></li>
+        <li><a href="#th-loads">5.6 Loads</a></li>
+      </ol>
+    </li>
+    <li><a href="#batch">6 Batch mode</a></li>
+    <li><a href="#project">7 Project file</a></li>
+    <li><a href="#outputs">8 Output files</a></li>
+    <li><a href="#example">9 Worked example</a></li>
+    <li><a href="#api">10 Python API</a></li>
+    <li><a href="#verification">11 Verification</a></li>
+    <li><a href="#limits">12 Limits &amp; tips</a></li>
+    <li><a href="#files">13 Source files</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="hero">
+  <button class="themebtn" id="themebtn" type="button" aria-label="Toggle colour theme">Theme</button>
+  <h1>Shaft Torsion Toolkit</h1>
+  <p class="lede">User manual and technical reference. From a STEP model of a shaft to a lumped torsional vibration model: section inertias, FEM torsional stiffness, natural frequencies, time response, frequency response and animation on the CAD model.</p>
+  <div class="meta"><span class="pill">Version 1.0.0</span><span class="pill">Python 3.10+</span><span class="pill">Units: SI internally, mm for lengths in inputs</span></div>
+</header>
+
+<!-- ================================================================== -->
+<h2 id="overview">1 Overview</h2>
+<p>The toolkit takes a shaft from a STEP file and turns it into a chain of rotating inertias connected by torsional springs. Each step feeds the next:</p>
+
+<div class="steps">
+  <div class="step" style="--c:var(--s1)"><b>1 · Split &amp; inertia</b><span>Cut the CAD model with planes normal to the axis and compute each section's mass moment of inertia <i>J<sub>i</sub></i>.</span></div>
+  <div class="step" style="--c:var(--s2)"><b>2 · FEM stiffness</b><span>Mesh with tetrahedra, clamp one end, twist the other, read the rotation in each section and derive springs <i>k<sub>i</sub></i>.</span></div>
+  <div class="step" style="--c:var(--s3)"><b>3 · Vibration model</b><span>Solve <i>J θ̈ + C θ̇ + K θ = M(t)</i>: natural frequencies, mode shapes, time simulation, FRF.</span></div>
+  <div class="step" style="--c:var(--s4)"><b>4 · Animation</b><span>Show the time response, a mode shape or the static FEM twist on the split CAD model; export GIF/MP4.</span></div>
+</div>
+
+<figure>
+<svg viewBox="0 0 720 245" role="img" aria-label="Lumped model: a stepped shaft split into sections, each replaced by an inertia J connected by springs k and dampers c">
+  <defs>
+    <style>
+      .ln{stroke:var(--text); stroke-width:1.5; fill:none}
+      .sec{stroke:var(--text); stroke-width:1.2}
+      .lbl{fill:var(--text); font:13px system-ui,sans-serif}
+      .sm{fill:var(--muted); font:12px system-ui,sans-serif}
+      .cut{stroke:#c0392b; stroke-width:1.5; stroke-dasharray:4 3}
+    </style>
+  </defs>
+  <!-- shaft -->
+  <rect class="sec" x="40"  y="40" width="60"  height="30" fill="var(--s1)" fill-opacity=".35"/>
+  <rect class="sec" x="100" y="25" width="120" height="60" fill="var(--s2)" fill-opacity=".35"/>
+  <rect class="sec" x="220" y="35" width="140" height="40" fill="var(--s3)" fill-opacity=".35"/>
+  <rect class="sec" x="360" y="42" width="120" height="26" fill="var(--s4)" fill-opacity=".35"/>
+  <line class="cut" x1="100" y1="15" x2="100" y2="95"/>
+  <line class="cut" x1="220" y1="15" x2="220" y2="95"/>
+  <line class="cut" x1="360" y1="15" x2="360" y2="95"/>
+  <text class="sm" x="40" y="110">STEP model, red = cut planes</text>
+  <!-- clamp hatching -->
+  <line class="ln" x1="36" y1="30" x2="36" y2="80"/>
+  <g class="ln"><line x1="36" y1="34" x2="28" y2="42"/><line x1="36" y1="46" x2="28" y2="54"/><line x1="36" y1="58" x2="28" y2="66"/><line x1="36" y1="70" x2="28" y2="78"/></g>
+  <!-- torque arrow at end -->
+  <path class="ln" d="M492 38 A18 18 0 1 1 492 72" />
+  <path d="M492 72 l-7 -2 l5 -6 z" fill="var(--text)"/>
+  <text class="lbl" x="516" y="60">T</text>
+
+
+  <!-- lumped chain -->
+  <g transform="translate(0,125)">
+    <text class="sm" x="40" y="108">Lumped model: inertias at section middles, springs from FEM</text>
+    <g class="ln">
+      <rect x="55"  y="25" width="30" height="40" fill="var(--s1)" fill-opacity=".35"/>
+      <rect x="175" y="25" width="30" height="40" fill="var(--s2)" fill-opacity=".35"/>
+      <rect x="305" y="25" width="30" height="40" fill="var(--s3)" fill-opacity=".35"/>
+      <rect x="435" y="25" width="30" height="40" fill="var(--s4)" fill-opacity=".35"/>
+      <path d="M85 38 h15 l5 -6 l10 12 l10 -12 l10 12 l10 -12 l10 12 l5 -6 h15"/>
+      <path d="M205 38 h20 l5 -6 l10 12 l10 -12 l10 12 l10 -12 l10 12 l5 -6 h20"/>
+      <path d="M335 38 h20 l5 -6 l10 12 l10 -12 l10 12 l10 -12 l10 12 l5 -6 h20"/>
+      <path d="M85 54 h30 M115 48 v12 M121 46 v16 M115 46 h14 M115 62 h14 M121 54 h54" />
+      <path d="M205 54 h40 M245 48 v12 M251 46 v16 M245 46 h14 M245 62 h14 M251 54 h54" />
+      <path d="M335 54 h40 M375 48 v12 M381 46 v16 M375 46 h14 M375 62 h14 M381 54 h54" />
+    </g>
+    <text class="lbl" x="62" y="18">J₁</text><text class="lbl" x="182" y="18">J₂</text>
+    <text class="lbl" x="312" y="18">J₃</text><text class="lbl" x="442" y="18">J₄</text>
+    <text class="sm" x="132" y="24">k₁</text><text class="sm" x="257" y="24">k₂</text><text class="sm" x="387" y="24">k₃</text>
+    <text class="sm" x="132" y="78">c₁</text><text class="sm" x="257" y="78">c₂</text><text class="sm" x="387" y="78">c₃</text>
+    <text class="sm" x="480" y="50">→ M(t) on any inertia</text>
+  </g>
+</svg>
+<figcaption>Figure 1. The split shaft (top) becomes a chain of inertias, springs and dampers (bottom). Optionally the first inertia is tied to ground with the clamp spring <i>k</i><sub>ground</sub>.</figcaption>
+</figure>
+
+<!-- ================================================================== -->
+<h2 id="install">2 Installation</h2>
+<h3>Windows</h3>
+<ol>
+  <li>Install Python 3.10 or newer (64-bit).</li>
+  <li>Run <code>setup_venv.bat</code> once. It creates <code>.venv</code> and installs <code>requirements.txt</code>.</li>
+  <li>Start the GUI with <code>run_gui.bat</code>. You can drag a <code>.step</code> file or a project <code>.json</code> onto it, or pass it as an argument.</li>
+</ol>
+<h3>Any operating system</h3>
+<pre><code>python -m venv .venv
+. .venv/bin/activate              # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+python run_gui.py examples/stepped_shaft_project.json</code></pre>
+<div class="note"><p><b>Linux:</b> gmsh needs a few system libraries, at least <code>libGLU</code>: <code>apt install libglu1-mesa</code>. On a headless machine you may also need <code>libxcursor1 libxft2 libxinerama1</code>.</p></div>
+
+<h3>Dependencies</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Package</th><th>Used for</th><th>Required</th></tr></thead>
+<tbody>
+<tr><td><code>numpy</code>, <code>scipy</code></td><td>Numerics, sparse matrices, eigenvalues</td><td>yes</td></tr>
+<tr><td><code>gmsh</code> ≥ 4.11</td><td>STEP import (OpenCASCADE), splitting, meshing</td><td>yes</td></tr>
+<tr><td><code>PySide6</code>, <code>pyvista</code>, <code>pyvistaqt</code></td><td>GUI and 3D view</td><td>GUI only</td></tr>
+<tr><td><code>matplotlib</code></td><td>Plots (GUI and batch PNG)</td><td>yes</td></tr>
+<tr><td><code>imageio</code> (+ <code>imageio-ffmpeg</code>)</td><td>GIF (MP4) export of animations</td><td>optional</td></tr>
+<tr><td><code>pypardiso</code></td><td>Fast direct solver for large meshes (x86-64)</td><td>recommended</td></tr>
+<tr><td><code>pyamg</code></td><td>Iterative fallback solver when PARDISO is missing</td><td>optional</td></tr>
+<tr><td><code>pytest</code></td><td>Test suite</td><td>dev</td></tr>
+</tbody></table></div>
+
+<!-- ================================================================== -->
+<h2 id="quickstart">3 Quick start</h2>
+<ol>
+  <li><b>Open</b> <code>examples/stepped_shaft.step</code> with <i>Open STEP file</i>. The axis is found automatically.</li>
+  <li><b>Cut planes:</b> type positions in mm (e.g. <code>60, 140, 220, 320, 450, 540</code>) or use <i>Equal sections</i>. Click <i>Split model &amp; compute inertias</i>.</li>
+  <li><b>FEM stiffness tab:</b> keep the defaults (steel, quadratic tetrahedra, start end clamped) and run. Expect one to a few minutes for ~30 000 elements without PARDISO.</li>
+  <li><b>Vibration model tab:</b> click <i>Build model</i>, add damping, then compute modes. Add loads and run a simulation or an FRF.</li>
+  <li><b>Animation tab:</b> pick a mode or the simulation, press play, export to GIF.</li>
+  <li><b>File → Save project</b> to store everything in a <code>.json</code>.</li>
+</ol>
+<p>Or load <code>examples/stepped_shaft_project.json</code>, which already contains cuts, material, loads and FRF settings.</p>
+
+<!-- ================================================================== -->
+<h2 id="gui">4 GUI reference</h2>
+<p>Long computations (split, FEM) run in a background thread; progress messages appear in the status bar.</p>
+
+<h3 id="tab-geometry">4.1 Tab 1 — Geometry</h3>
+<ul>
+  <li><b>Open STEP file.</b> Assemblies with several solids work. Touching solids are fused at their contact faces (bonded contact).</li>
+  <li><b>Shaft axis.</b>
+    <ul>
+      <li><i>auto</i> (default): the principal axis of inertia that differs from the other two (see <a href="#th-axis">5.1</a>). Within 1° of X, Y or Z it snaps to that axis.</li>
+      <li><i>X / Y / Z</i>: global direction through the centre of mass.</li>
+      <li><i>custom</i>: origin [mm] and direction vector.</li>
+    </ul>
+  </li>
+  <li><b>Cut planes.</b> Positions in mm measured from the shaft start along the axis. Type them, use <i>Equal sections</i>, or enable <i>Pick</i> and right-click on the model. Planes are previewed in red. <i>Sort</i>, <i>Remove</i> and <i>Clear</i> manage the list.</li>
+  <li><b>Split model &amp; compute inertias</b> produces a table with start, end, mass and <i>J</i> [kg·m²] per section; each section gets its own colour in the 3D view. <i>View along axis</i> aligns the camera.</li>
+</ul>
+
+<h3 id="tab-fem">4.2 Tab 2 — FEM stiffness</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Setting</th><th>Default</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td>E, ν</td><td>210 GPa, 0.3</td><td>Isotropic linear-elastic material. <i>G = E / (2(1+ν))</i>.</td></tr>
+<tr><td>Torque</td><td>1000 N·m</td><td>Torque on the loaded end. The model is linear, so it only scales the angles; stiffness is independent of it.</td></tr>
+<tr><td>Fixed end</td><td>start</td><td>End that is clamped (all DOFs zero). The other end is twisted through a rigid coupling (RBE2-like).</td></tr>
+<tr><td>Element size</td><td>auto</td><td><code>auto</code> = min(L/40, r<sub>min</sub>/2): at least ~4 elements across the thinnest section.</td></tr>
+<tr><td>Element type</td><td>quadratic</td><td>Quadratic tetrahedra (tet10) are recommended. Linear tetrahedra (tet4) are 10–15 % too stiff in torsion.</td></tr>
+<tr><td>End-face band</td><td>auto</td><td>Nodes within this axial distance of an end belong to the clamp or load face. <code>auto</code> = 0.2 % of the length.</td></tr>
+<tr><td>Lumped inertia at</td><td>middle</td><td>Where each section's rotation is measured: geometric middle of the section, or its centre of mass.</td></tr>
+</tbody></table></div>
+<p>The result table lists, per section: the rotation θ at the lumped position, the spring to the next inertia, and the section's own stiffness between its cut planes. Below it: the clamp-to-nearest-inertia stiffness and the total stiffness. The 3D view can show the FEM rotation field on the mesh.</p>
+
+<h3 id="tab-dynamics">4.3 Tab 3 — Vibration model</h3>
+<ul>
+  <li><b>Build model</b> fills the tables from steps 1 and 2. <b>J, k and c are editable</b>, so you can add attached parts (hubs, gears), a coupling stiffness, or values from other sources.</li>
+  <li><b>Damping</b>
+    <ul>
+      <li>a damper <i>c</i> per spring (between inertias),</li>
+      <li>damping to ground per inertia (bearings, fluid),</li>
+      <li><i>c = β·k</i> — stiffness-proportional damping for all springs,</li>
+      <li><i>c for ζ at the 1st elastic mode</i> — picks β so that the first elastic mode gets the damping ratio ζ.</li>
+    </ul>
+  </li>
+  <li><b>Boundary condition:</b> free–free, or grounded at the FEM clamp. Grounded adds the clamp spring <i>k</i><sub>ground</sub> (from the FEM) and an optional damper <i>c</i><sub>ground</sub> on the inertia next to the clamp.</li>
+  <li><b>Modes:</b> undamped natural frequencies, mode shapes (normalised to max |φ| = 1) and modal damping ratios.</li>
+  <li><b>Loads</b> — torque on inertia # (1-based in the GUI): constant, step, ramp, pulse, sine (offset, phase), linear sweep, or a formula in <code>t</code>. See <a href="#th-loads">5.6</a>.</li>
+  <li><b>Simulation:</b> end time and Δt. Δt = 0 selects 20 steps per period of the highest mode.</li>
+  <li><b>Plots:</b> angles, twist, spring torques, speeds, loads, and the receptance FRF (rotation per unit torque) for a chosen excitation inertia and frequency range.</li>
+</ul>
+
+<h3 id="tab-animation">4.4 Tab 4 — Animation</h3>
+<ul>
+  <li><b>Source:</b> time simulation, a mode shape, or the static FEM rotation.</li>
+  <li><b>Display:</b> <i>rigid sections</i> — each CAD section turns with its inertia; <i>smooth twist</i> — the rotation is interpolated along the axis.</li>
+  <li><b>Colouring:</b> by true rotation angle or by section. Pointers show the rotation of each section.</li>
+  <li><b>Amplification:</b> automatic (largest shown rotation 20°) or manual.</li>
+  <li><b>Export:</b> GIF (needs <code>imageio</code>) or MP4 (needs <code>imageio-ffmpeg</code>).</li>
+</ul>
+
+<h3 id="file-menu">4.5 File menu</h3>
+<ul>
+  <li><b>Save / Load project</b> (<code>.json</code>): STEP path (stored relative to the project file), axis, cuts, material, FEM settings, model values and loads. Results are recomputed after loading.</li>
+  <li><b>Export results</b> to a folder as <code>;</code>-separated CSV (see <a href="#outputs">8</a>).</li>
+  <li><b>Save screenshot</b> of the 3D view.</li>
+</ul>
+
+<!-- ================================================================== -->
+<h2 id="theory">5 Theory</h2>
+<p>All internal quantities are SI: m, kg, s, N, rad. Positions <i>s</i> are measured along the shaft axis.</p>
+
+<h3 id="th-axis">5.1 Shaft axis</h3>
+<p>For a body of revolution two principal moments of inertia are equal; the third belongs to the axis. The automatic mode computes the inertia tensor of the whole model about its centre of mass and picks the principal direction whose moment is farthest from the mean of the other two, penalising pairs that are not equal. This works for long shafts and short discs alike. If the axis is within 1° of a global axis it snaps to it, and the sign is chosen so the dominant component is positive.</p>
+
+<h3 id="th-inertia">5.2 Section inertias</h3>
+<p>The model is split with planes normal to the axis (OpenCASCADE boolean fragments). For each section, gmsh/OCC gives volume, centre of mass and inertia tensor <i>I</i><sub>com</sub>. With density ρ, mass <i>m</i> = ρ·V and the moment about the shaft axis (unit vector <b>a</b> through point <b>p</b>) follows from the parallel-axis theorem:</p>
+<div class="formula">J = ρ · ( <b>a</b><sup>T</sup> I<sub>com</sub> <b>a</b> + V · d² ),  d = distance of the section's centre of mass from the axis</div>
+<p>Check: a solid cylinder of diameter <i>D</i> and length <i>L</i> gives <i>J</i> = ρ·π·<i>D</i>⁴·<i>L</i>/32.</p>
+
+<h3 id="th-fem">5.3 FEM model</h3>
+<ul>
+  <li>The split model is meshed with linear or quadratic tetrahedra; cut faces are shared, so the mesh is conforming across sections.</li>
+  <li>Isotropic linear elasticity, small strains; stiffness matrix assembled in chunks of 8000 elements.</li>
+  <li><b>Clamp:</b> all nodes within the end band of the fixed end have zero displacement.</li>
+  <li><b>Load:</b> all nodes of the loaded end get a rigid small rotation φ₀ about the axis (prescribed displacement <i>u</i> = φ₀·<i>r</i>·<b>t</b>, <b>t</b> = tangential unit vector). The reaction torque <i>T</i><sub>ref</sub> on that face is computed from the nodal forces, and the solution is scaled by <i>T</i>/<i>T</i><sub>ref</sub>.</li>
+  <li><b>Solver:</b> PARDISO (<code>pypardiso</code>) if installed; otherwise, for more than 30 000 unknowns, smoothed-aggregation AMG-preconditioned CG (<code>pyamg</code>, rigid-body modes as near-null space); otherwise SuperLU.</li>
+</ul>
+
+<h3 id="th-stiffness">5.4 Stiffness extraction</h3>
+<p>The rotation θ at an axial position <i>s</i>₀ is the least-squares rigid rotation of all nodes in a thin slice |<i>s</i> − <i>s</i>₀| ≤ band (band = 0.6 element sizes, widened automatically until at least 12 nodes are found). A linear variation along the slice is allowed:</p>
+<div class="formula">u<sub>t</sub> = r · ( θ + θ′ · (s − s₀) )   → least squares for θ, θ′</div>
+<p>From these rotations, with the applied torque <i>T</i>:</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Quantity</th><th>Formula</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><i>k</i><sub>i</sub> (spring)</td><td>T / |θ<sub>mid,i+1</sub> − θ<sub>mid,i</sub>|</td><td>Spring between inertia i and i+1 — used in the vibration model.</td></tr>
+<tr><td><i>k</i><sub>section,i</sub></td><td>T / |θ<sub>cut,i+1</sub> − θ<sub>cut,i</sub>|</td><td>Stiffness of the section between its own cut planes.</td></tr>
+<tr><td><i>k</i><sub>ground</sub></td><td>T / |θ<sub>mid</sub> of the inertia next to the clamp|</td><td>Clamp → nearest inertia; used for the grounded boundary condition.</td></tr>
+<tr><td><i>k</i><sub>total</sub></td><td>T / θ<sub>loaded end</sub></td><td>Whole shaft, clamp to loaded end.</td></tr>
+</tbody></table></div>
+<div class="note"><p>Because springs are measured between section middles, the 3D stress field around shoulders and fillets is part of the FEM solution, so local stiffening or softening at diameter steps ends up in the spring values.</p></div>
+
+<h3 id="th-dynamics">5.5 Vibration model</h3>
+<div class="formula">J θ̈ + C θ̇ + K θ = M(t)</div>
+<ul>
+  <li><b>J</b> = diag(<i>J</i>₁ … <i>J</i><sub>n</sub>).</li>
+  <li><b>K</b>, <b>C</b>: tridiagonal chain assembled from <i>k</i><sub>i</sub>, <i>c</i><sub>i</sub>; <b>C</b> also gets the damping to ground <i>c</i><sub>abs,i</sub> on the diagonal; the grounded inertia gets <i>k</i><sub>ground</sub>, <i>c</i><sub>ground</sub>.</li>
+  <li><b>Modes:</b> generalised eigenproblem <b>K</b>φ = ω²<b>J</b>φ. Modal damping ratio ζ<sub>j</sub> = φ<sub>j</sub><sup>T</sup><b>C</b>φ<sub>j</sub> / (2 m<sub>j</sub> ω<sub>j</sub>) (diagonal of the modal damping matrix). Exact damped eigenvalues are available via <code>complex_modes()</code>.</li>
+  <li><b>Time integration:</b> Newmark, average acceleration (β = ¼, γ = ½): unconditionally stable, no numerical damping. The effective matrix is LU-factorised once.</li>
+  <li><b>Spring torque</b> between i and i+1: <i>k</i><sub>i</sub>(θ<sub>i+1</sub> − θ<sub>i</sub>) + <i>c</i><sub>i</sub>(θ̇<sub>i+1</sub> − θ̇<sub>i</sub>).</li>
+  <li><b>FRF</b> (receptance): Θ(ω) = (<b>K</b> − ω²<b>J</b> + iω<b>C</b>)⁻¹ <b>e</b><sub>node</sub>, in rad per N·m.</li>
+</ul>
+<div class="warn"><p>Without any damping, the simulated response rings forever and spring torques show every mode at full amplitude. Add at least a small ζ (e.g. 1–2 %) for realistic time histories.</p></div>
+
+<h3 id="th-loads">5.6 Loads</h3>
+<div class="tablewrap"><table>
+<thead><tr><th><code>kind</code></th><th>Torque M(t)</th><th>Parameters used</th></tr></thead>
+<tbody>
+<tr><td><code>constant</code></td><td>A</td><td>amplitude</td></tr>
+<tr><td><code>step</code></td><td>A for t ≥ t<sub>start</sub> (and t &lt; t<sub>end</sub> if t<sub>end</sub> &gt; t<sub>start</sub>)</td><td>amplitude, t_start, t_end</td></tr>
+<tr><td><code>ramp</code></td><td>0 → A linearly between t<sub>start</sub> and t<sub>end</sub>, then A</td><td>amplitude, t_start, t_end</td></tr>
+<tr><td><code>pulse</code></td><td>A for t<sub>start</sub> ≤ t &lt; t<sub>end</sub></td><td>amplitude, t_start, t_end</td></tr>
+<tr><td><code>sine</code></td><td>offset + A·sin(2πf(t − t<sub>start</sub>) + phase), from t<sub>start</sub></td><td>amplitude, frequency, phase_deg, offset, t_start</td></tr>
+<tr><td><code>sweep</code></td><td>Linear chirp from f to f<sub>end</sub> between t<sub>start</sub> and t<sub>end</sub></td><td>amplitude, frequency, f_end, phase_deg, t_start, t_end</td></tr>
+<tr><td><code>expression</code></td><td>Formula in <code>t</code></td><td>expression</td></tr>
+</tbody></table></div>
+<p>Formulas may use <code>sin cos tan exp log sqrt abs pi where clip minimum maximum sign heaviside tanh arctan</code>, e.g. <code>500*sin(2*pi*50*t)*exp(-5*t)</code>. Python builtins are disabled. Several loads on the same inertia add up.</p>
+
+<!-- ================================================================== -->
+<h2 id="batch">6 Batch mode (no GUI)</h2>
+<pre><code>python -m shaft_torsion.cli project.json [output_folder]</code></pre>
+<p>Runs split → FEM → vibration model → time simulation (if loads are defined), prints a summary table and natural frequencies, and writes CSV files, <code>split_model.brep</code> and <code>time_response.png</code>. Without an output folder, results go to <code>&lt;project&gt;_results/</code>.</p>
+<p>In batch mode, when <code>"model"</code> is <code>null</code>, the model is grounded at the FEM clamp and has no damping.</p>
+
+<!-- ================================================================== -->
+<h2 id="project">7 Project file (JSON)</h2>
+<p>Lengths are in mm, everything else SI. Missing keys take the defaults shown. A relative <code>step_file</code> is resolved relative to the project file.</p>
+<pre><code>{
+  "step_file": "stepped_shaft.step",
+  "axis": {"mode": "auto", "origin_mm": [0, 0, 0], "direction": [1, 0, 0]},
+  "density": 7850.0,
+  "cuts_mm": [60, 140, 220, 320, 450, 540],
+  "fem": {"E_GPa": 210.0, "nu": 0.3, "torque": 1000.0, "fixed_end": "start",
+          "mesh_size_mm": 0.0, "order": 2, "end_band_mm": 0.0, "lumped_at": "middle"},
+  "model": null,
+  "loads": [
+    {"node": 6, "kind": "step", "amplitude": 200.0, "t_start": 0.005},
+    {"node": 1, "kind": "sine", "amplitude": 50.0, "frequency": 120.0, "t_start": 0.0}
+  ],
+  "simulation": {"t_end": 0.1, "dt": 0.0},
+  "frf": {"node": 7, "f_min": 10.0, "f_max": 5000.0, "n": 800}
+}</code></pre>
+<dl class="params">
+  <dt>axis.mode</dt><dd><code>auto</code>, <code>x</code>, <code>y</code>, <code>z</code> or <code>custom</code> (uses <code>origin_mm</code> and <code>direction</code>).</dd>
+  <dt>density</dt><dd>kg/m³.</dd>
+  <dt>cuts_mm</dt><dd>Cut positions measured from the shaft start.</dd>
+  <dt>fem.mesh_size_mm, end_band_mm</dt><dd><code>0</code> = automatic.</dd>
+  <dt>fem.order</dt><dd><code>1</code> linear or <code>2</code> quadratic tetrahedra.</dd>
+  <dt>fem.fixed_end</dt><dd><code>start</code> or <code>end</code>.</dd>
+  <dt>fem.lumped_at</dt><dd><code>middle</code> or <code>com</code>.</dd>
+  <dt>model</dt><dd><code>null</code> = from inertias and FEM. Or an object <code>{"J": [...], "k": [...], "c": [...], "c_abs": [...], "ground_node": 0, "k_ground": ..., "c_ground": ...}</code>; <code>ground_node</code> = −1 means free–free.</dd>
+  <dt>loads[].node</dt><dd><b>0-based</b> inertia index in JSON (the GUI shows it 1-based). Other keys as in <a href="#th-loads">5.6</a>.</dd>
+  <dt>simulation.dt</dt><dd><code>0</code> = 20 steps per period of the highest mode.</dd>
+</dl>
+
+<!-- ================================================================== -->
+<h2 id="outputs">8 Output files</h2>
+<p>All CSV files use <code>;</code> as separator and <code>.</code> as decimal point. Positions are in mm from the shaft start.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>File</th><th>Columns</th></tr></thead>
+<tbody>
+<tr><td><code>sections.csv</code></td><td>section, start_mm, end_mm, length_mm, com_mm, mass_kg, J_kgm2</td></tr>
+<tr><td><code>torsion_fem.csv</code></td><td>section, lumped_position_mm, theta_deg, k_section_Nm_per_rad, k_to_next_Nm_per_rad; trailing <code>#</code> lines give torque, k_ground and k_total</td></tr>
+<tr><td><code>modes.csv</code></td><td>mode, f_Hz, zeta, phi_1 … phi_n</td></tr>
+<tr><td><code>time_response.csv</code></td><td>t_s, theta_i_rad, torque_i_i+1_Nm, load_i_Nm</td></tr>
+<tr><td><code>time_response.png</code></td><td>Rotation and spring torque plots (batch mode)</td></tr>
+<tr><td><code>split_model.brep</code></td><td>Split CAD geometry (batch mode)</td></tr>
+</tbody></table></div>
+
+<!-- ================================================================== -->
+<h2 id="example">9 Worked example</h2>
+<p>Output of <code>python -m shaft_torsion.cli examples/stepped_shaft_project.json</code>: a 600 mm stepped steel shaft, 7 sections, quadratic tetrahedra (28 505 elements, 140 367 DOF, about 110 s with SuperLU).</p>
+<div class="tablewrap"><table>
+<thead><tr><th class="num">#</th><th class="num">start [mm]</th><th class="num">end [mm]</th><th class="num">mass [kg]</th><th class="num">J [kg·m²]</th><th class="num">θ [°] at 1000 N·m</th><th class="num">k → next [N·m/rad]</th></tr></thead>
+<tbody>
+<tr><td class="num">1</td><td class="num">0</td><td class="num">60</td><td class="num">0.497</td><td class="num">1.154e-4</td><td class="num">0.0868</td><td class="num">2.823e5</td></tr>
+<tr><td class="num">2</td><td class="num">60</td><td class="num">140</td><td class="num">6.498</td><td class="num">3.622e-2</td><td class="num">0.2898</td><td class="num">5.559e5</td></tr>
+<tr><td class="num">3</td><td class="num">140</td><td class="num">220</td><td class="num">6.893</td><td class="num">3.640e-2</td><td class="num">0.3928</td><td class="num">5.509e5</td></tr>
+<tr><td class="num">4</td><td class="num">220</td><td class="num">320</td><td class="num">1.541</td><td class="num">4.817e-4</td><td class="num">0.4968</td><td class="num">4.313e5</td></tr>
+<tr><td class="num">5</td><td class="num">320</td><td class="num">450</td><td class="num">3.040</td><td class="num">1.999e-3</td><td class="num">0.6297</td><td class="num">4.088e5</td></tr>
+<tr><td class="num">6</td><td class="num">450</td><td class="num">540</td><td class="num">1.940</td><td class="num">1.583e-3</td><td class="num">0.7699</td><td class="num">1.387e5</td></tr>
+<tr><td class="num">7</td><td class="num">540</td><td class="num">600</td><td class="num">0.436</td><td class="num">6.503e-5</td><td class="num">1.1831</td><td class="num">—</td></tr>
+</tbody></table></div>
+<p>Total stiffness 4.26 × 10⁴ N·m/rad; clamp → inertia 1: 6.60 × 10⁵ N·m/rad.<br>
+Natural frequencies (grounded at the clamp): <b>242, 885, 1291, 3548, 7393, 7524, 14 390 Hz</b>.</p>
+<div class="note"><p>Seven inertias give at most seven modes. The highest ones depend strongly on how finely the shaft is cut — place at least 3–4 sections between any two nodes of the highest mode you care about.</p></div>
+
+<!-- ================================================================== -->
+<h2 id="api">10 Python API</h2>
+<p>All steps are usable from scripts. Minimal example:</p>
+<pre><code>from shaft_torsion import geometry as g
+from shaft_torsion.fem import FemSettings, run_torsion
+from shaft_torsion.dynamics import Load
+from shaft_torsion.project import model_from_results
+
+info  = g.load_step("examples/stepped_shaft.step")
+axis  = info.auto_axis                                   # or g.Axis(origin_m, direction)
+s0, s1 = g.axial_range(info.surface[0], axis)
+cuts  = [s0 + x / 1000 for x in (60, 140, 220, 320, 450, 540)]
+geo   = g.split_model("examples/stepped_shaft.step", axis, cuts, 7850.0, (s0, s1))
+
+res   = run_torsion(geo, FemSettings(E=210e9, nu=0.3, order=2))
+model = model_from_results(geo, res)                     # grounded at the clamp
+model.c = 1e-5 * model.k                                 # c = beta * k
+
+f, phi, zeta = model.modes()
+sim = model.simulate([Load(node=6, kind="step", amplitude=200, t_start=0.005)],
+                     t_end=0.1, dt=model.recommended_dt())
+H = model.frf(node=6, freqs=[10, 100, 1000])</code></pre>
+<h3>Main objects</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Object</th><th>Key members</th></tr></thead>
+<tbody>
+<tr><td><code>geometry.Axis</code></td><td><code>origin</code>, <code>direction</code>, <code>s_of(pts)</code>, <code>radial(pts)</code>, <code>rotate(pts, angles)</code></td></tr>
+<tr><td><code>geometry.load_step(path)</code> → <code>StepInfo</code></td><td><code>com</code>, <code>auto_axis</code>, <code>surface</code> (display mesh)</td></tr>
+<tr><td><code>geometry.split_model(...)</code> → <code>ShaftGeometry</code></td><td><code>sections</code> (each with <code>s_start</code>, <code>s_end</code>, <code>mass</code>, <code>J</code>, <code>s_com</code>), <code>cuts</code>, <code>s_min</code>, <code>s_max</code>, <code>length</code></td></tr>
+<tr><td><code>fem.FemSettings</code></td><td><code>E</code>, <code>nu</code>, <code>torque</code>, <code>mesh_size</code>, <code>order</code>, <code>fixed_end</code>, <code>end_band</code>, <code>mid_from_com</code></td></tr>
+<tr><td><code>fem.run_torsion(geo, st)</code> → <code>TorsionResult</code></td><td><code>theta_mid</code>, <code>k_spring</code>, <code>k_section</code>, <code>k_ground</code>, <code>k_total</code>, <code>ground_index</code>, <code>nodes</code>, <code>disp</code>, <code>info</code></td></tr>
+<tr><td><code>dynamics.TorsionalModel</code></td><td><code>J</code>, <code>k</code>, <code>c</code>, <code>c_abs</code>, <code>ground_node</code>, <code>k_ground</code>, <code>c_ground</code>; <code>matrices()</code>, <code>modes()</code>, <code>complex_modes()</code>, <code>simulate()</code>, <code>frf()</code>, <code>recommended_dt()</code></td></tr>
+<tr><td><code>dynamics.Load</code></td><td>see <a href="#th-loads">5.6</a>; callable: <code>load(t)</code> → torque array</td></tr>
+<tr><td><code>project</code></td><td><code>load_project</code>, <code>save_project</code>, <code>run_pipeline</code>, <code>export_results</code></td></tr>
+</tbody></table></div>
+<p>In the API, all lengths are in metres and load <code>node</code> indices are 0-based.</p>
+
+<!-- ================================================================== -->
+<h2 id="verification">11 Verification</h2>
+<p>Run <code>python -m pytest tests -q</code>. The tests compare with closed-form results:</p>
+<ul>
+  <li><b>Section inertias</b> of a Ø40 mm cylinder along an oblique axis vs. ρ·π·d⁴·L/32 — relative error &lt; 1e-6.</li>
+  <li><b>FEM stiffness</b> (between inertias, per section, clamp → inertia, total) vs. <i>G·I</i><sub>p</sub>/<i>L</i> — within 0.2 %; with a 6 mm mesh the error is about 0.001 %.</li>
+  <li><b>Two-inertia natural frequency</b>, the <b>step response</b> of a single grounded inertia, and the <b>damping ratio</b>.</li>
+</ul>
+
+<!-- ================================================================== -->
+<h2 id="limits">12 Limits &amp; tips</h2>
+<ul>
+  <li>Linear-elastic, small-strain, one isotropic material. For parts of other materials, edit J and k in the vibration-model tables.</li>
+  <li>Cut planes are always normal to the shaft axis; positions are measured along it.</li>
+  <li>The rigid coupling at the loaded end blocks warping of that face. This matters only for non-circular end sections; springs are measured between section middles, away from the ends.</li>
+  <li>Keyways, splines and fits are modelled exactly as in the CAD; touching solids are bonded; simplify the CAD if local features should not stiffen the shaft.</li>
+  <li><b>Large meshes:</b> install <code>pypardiso</code> (much faster). Without it, AMG-CG (<code>pyamg</code>) is used, then SuperLU. Memory grows quickly with element count; coarsen the mesh first, then refine to check convergence.</li>
+  <li>Use quadratic elements. If you must use linear tetrahedra, expect 10–15 % too high stiffness.</li>
+  <li>Error <i>“Too few nodes on the shaft end faces”</i>: increase the end-face band.</li>
+</ul>
+
+<!-- ================================================================== -->
+<h2 id="files">13 Source files</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>File</th><th>Content</th></tr></thead>
+<tbody>
+<tr><td><code>shaft_torsion/geometry.py</code></td><td>STEP import, axis detection, splitting, inertias, display tessellation</td></tr>
+<tr><td><code>shaft_torsion/fem.py</code></td><td>Meshing, tet4/tet10 stiffness assembly, boundary conditions, solvers, section rotations, stiffness</td></tr>
+<tr><td><code>shaft_torsion/dynamics.py</code></td><td>Lumped model, loads, modes, Newmark simulation, FRF</td></tr>
+<tr><td><code>shaft_torsion/gui.py</code></td><td>PySide6 + PyVista GUI</td></tr>
+<tr><td><code>shaft_torsion/project.py</code>, <code>cli.py</code></td><td>Project JSON, CSV export, batch pipeline</td></tr>
+<tr><td><code>shaft_torsion/gmsh_session.py</code></td><td>Context manager for gmsh initialise/finalise</td></tr>
+<tr><td><code>examples/</code></td><td><code>plain_shaft.step</code>, <code>stepped_shaft.step</code>, generator script, example project</td></tr>
+<tr><td><code>tests/test_toolkit.py</code></td><td>Verification against analytical solutions</td></tr>
+</tbody></table></div>
+
+<footer>Shaft Torsion Toolkit 1.0.0 — documentation. This page is self-contained and works offline.</footer>
+</main>
+</div>
+<script>
+(function(){
+  var root=document.documentElement, btn=document.getElementById('themebtn');
+  try{var t=localStorage.getItem('stt-theme'); if(t) root.setAttribute('data-theme',t);}catch(e){}
+  btn.addEventListener('click',function(){
+    var dark=root.getAttribute('data-theme')?root.getAttribute('data-theme')==='dark'
+      :window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var n=dark?'light':'dark'; root.setAttribute('data-theme',n);
+    try{localStorage.setItem('stt-theme',n);}catch(e){}
+  });
+})();
+</script>
+</body>
+</html>

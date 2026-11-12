@@ -8,6 +8,8 @@ A Python tool with a GUI that takes a shaft from a STEP file and does three thin
 
 It then **animates** the time response, a mode shape or the static FEM twist on the split CAD model.
 
+Full manual (HTML, works offline): open [`docs/index.html`](docs/index.html) in a browser.
+
 ```
 STEP ──► 1 split + inertia J_i ──► 2 FEM: θ at the middle of each section ──► k_i = T / Δθ
                                                                         │
