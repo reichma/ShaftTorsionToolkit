@@ -1,0 +1,15 @@
+{
+  "step_file": "stepped_shaft.step",
+  "axis": {"mode": "auto", "origin_mm": [0, 0, 0], "direction": [1, 0, 0]},
+  "density": 7850.0,
+  "cuts_mm": [60, 140, 220, 320, 450, 540],
+  "fem": {"E_GPa": 210.0, "nu": 0.3, "torque": 1000.0, "fixed_end": "start",
+          "mesh_size_mm": 0.0, "order": 2, "end_band_mm": 0.0, "lumped_at": "middle"},
+  "model": null,
+  "loads": [
+    {"node": 6, "kind": "step", "amplitude": 200.0, "t_start": 0.005},
+    {"node": 1, "kind": "sine", "amplitude": 50.0, "frequency": 120.0, "t_start": 0.0}
+  ],
+  "simulation": {"t_end": 0.1, "dt": 0.0},
+  "frf": {"node": 7, "f_min": 10.0, "f_max": 5000.0, "n": 800}
+}
