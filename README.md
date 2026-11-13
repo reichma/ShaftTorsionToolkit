@@ -30,6 +30,13 @@ python run_gui.py examples/stepped_shaft_project.json
 
 On Linux, gmsh needs the system library `libGLU` (`apt install libglu1-mesa`).
 
+**Windows: `ImportError: DLL load failed while importing QtCore`.** PySide6 cannot load its Qt DLLs. `run_gui.bat` then prints a diagnosis. Usual fixes, most likely first:
+
+1. Install the latest [Microsoft Visual C++ Redistributable (x64)](https://aka.ms/vs/17/release/vc_redist.x64.exe) and restart.
+2. Use a 64-bit Python from python.org (not Anaconda or the Microsoft Store), delete `.venv` and run `setup_venv.bat` again.
+3. Remove folders with their own Qt or `msvcp140.dll` (Anaconda, other Qt apps) from `PATH`.
+4. Reinstall: `.venv\Scripts\python -m pip install --force-reinstall PySide6`.
+
 ## Using the GUI
 
 ### Tab 1: Geometry
