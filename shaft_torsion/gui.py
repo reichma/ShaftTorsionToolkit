@@ -1302,6 +1302,7 @@ class MainWindow(QMainWindow):
         self.ed_dt.setValue(d["simulation"]["dt"])
         self.ed_fmin.setValue(d["frf"]["f_min"])
         self.ed_fmax.setValue(d["frf"]["f_max"])
+        self.sp_frf_node.setValue(int(d["frf"].get("node", 1)))
         self._pending_model = d.get("model")
 
         def after():
