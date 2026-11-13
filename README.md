@@ -141,4 +141,4 @@ Run `python -m pytest tests -q`. The tests check against closed-form results:
 | `shaft_torsion/dynamics.py` | Lumped model, loads, modes, Newmark simulation, FRF |
 | `shaft_torsion/gui.py` | PySide6 + PyVista GUI |
 | `shaft_torsion/project.py`, `cli.py` | Project JSON, CSV export, batch run |
-| `examples/` | `plain_shaft.step`, `stepped_shaft.step` (generator script included), example project |
+| `examples/` | `plain_shaft.step`, `stepped_shaft.step` (generator script included), example project; `gear_shaft.step` + `gear_shaft_project.json`: 420 mm gearbox output shaft with a keyed gear (3-solid assembly, generator `make_gear_shaft.py`) |

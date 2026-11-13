@@ -1,0 +1,14 @@
+{
+  "step_file": "gear_shaft.step",
+  "axis": {"mode": "auto", "origin_mm": [0, 0, 0], "direction": [1, 0, 0]},
+  "density": 7850.0,
+  "cuts_mm": [60, 90, 175, 237.5, 300, 345],
+  "fem": {"E_GPa": 210.0, "nu": 0.3, "torque": 1000.0, "fixed_end": "start",
+          "mesh_size_mm": 0.0, "order": 2, "end_band_mm": 0.0, "lumped_at": "middle"},
+  "model": null,
+  "loads": [
+    {"node": 2, "kind": "step", "amplitude": 300.0, "t_start": 0.002}
+  ],
+  "simulation": {"t_end": 0.04, "dt": 0.0},
+  "frf": {"node": 3, "f_min": 10.0, "f_max": 20000.0, "n": 1500}
+}

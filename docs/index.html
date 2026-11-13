@@ -244,7 +244,7 @@ python run_gui.py examples/stepped_shaft_project.json</code></pre>
   <li><b>Animation tab:</b> pick a mode or the simulation, press play, export to GIF.</li>
   <li><b>File → Save project</b> to store everything in a <code>.json</code>.</li>
 </ol>
-<p>Or load <code>examples/stepped_shaft_project.json</code>, which already contains cuts, material, loads and FRF settings.</p>
+<p>Or load <code>examples/stepped_shaft_project.json</code>, which already contains cuts, material, loads and FRF settings. <code>examples/gear_shaft_project.json</code> is a more realistic case: a gearbox output shaft with a gear bonded on a feather key, keyways, grooves and fillets (1st natural frequency ≈ 394 Hz when grounded at the clamp).</p>
 
 <!-- ================================================================== -->
 <h2 id="gui">4 GUI reference</h2>
@@ -511,7 +511,7 @@ H = model.frf(node=6, freqs=[10, 100, 1000])</code></pre>
 <tr><td><code>shaft_torsion/gui.py</code></td><td>PySide6 + PyVista GUI</td></tr>
 <tr><td><code>shaft_torsion/project.py</code>, <code>cli.py</code></td><td>Project JSON, CSV export, batch pipeline</td></tr>
 <tr><td><code>shaft_torsion/gmsh_session.py</code></td><td>Context manager for gmsh initialise/finalise</td></tr>
-<tr><td><code>examples/</code></td><td><code>plain_shaft.step</code>, <code>stepped_shaft.step</code>, generator script, example project</td></tr>
+<tr><td><code>examples/</code></td><td><code>plain_shaft.step</code>, <code>stepped_shaft.step</code>, generator script, example project; <code>gear_shaft.step</code> + <code>gear_shaft_project.json</code>: gearbox output shaft with keyed gear (three solids, generator <code>make_gear_shaft.py</code>)</td></tr>
 <tr><td><code>tests/test_toolkit.py</code></td><td>Verification against analytical solutions</td></tr>
 </tbody></table></div>
 
