@@ -22,7 +22,7 @@ Windows: run `setup_venv.bat` once, then start with `run_gui.bat`. You can pass 
 
 * **With Anaconda / Miniconda installed** (found via an active conda shell, `PATH`, or the usual install folders), `setup_venv.bat` creates a conda environment in `.conda_env` with Python 3.12 from **conda-forge** and installs `requirements.txt` into it with pip. conda-forge's Python brings a current C++ runtime next to its `python.exe`, so PySide6 loads; a venv made from Anaconda's own Python cannot load current PySide6 (see below). Only the free conda-forge channel is used.
 * **Without conda** it creates a plain venv in `.venv`. `setup_venv.bat venv` forces this.
-* `run_gui.bat` uses `.conda_env` if it exists, otherwise `.venv`. Delete either folder and run `setup_venv.bat` again to rebuild it.
+* `run_gui.bat` uses `.venv` if it exists, otherwise `.conda_env`. Delete either folder and run `setup_venv.bat` again to rebuild it.
 
 Any OS:
 
