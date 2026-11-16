@@ -20,6 +20,10 @@ STEP ──► 1 split + inertia J_i ──► 2 FEM: θ at the middle of each s
 
 Windows: run `setup_venv.bat` once, then start with `run_gui.bat`. You can pass a `.step` file or a project `.json` as an argument.
 
+* **With Anaconda / Miniconda installed** (found via an active conda shell, `PATH`, or the usual install folders), `setup_venv.bat` creates a conda environment in `.conda_env` with Python 3.12 from **conda-forge** and installs `requirements.txt` into it with pip. conda-forge's Python brings a current C++ runtime next to its `python.exe`, so PySide6 loads; a venv made from Anaconda's own Python cannot load current PySide6 (see below). Only the free conda-forge channel is used.
+* **Without conda** it creates a plain venv in `.venv`. `setup_venv.bat venv` forces this.
+* `run_gui.bat` uses `.conda_env` if it exists, otherwise `.venv`. Delete either folder and run `setup_venv.bat` again to rebuild it.
+
 Any OS:
 
 ```bash
@@ -33,7 +37,8 @@ On Linux, gmsh needs the system library `libGLU` (`apt install libglu1-mesa`).
 **Windows: `ImportError: DLL load failed while importing QtCore`.** PySide6 cannot load its Qt DLLs. `setup_venv.bat` tests this at the end (`python run_gui.py --check`) and prints a diagnosis with the versions of every `msvcp140.dll` involved. On Python ≤ 3.12 it then retries with `PySide6<6.8`, which works with older C++ runtimes; for Python 3.13+ no such build exists. Usual fixes, most likely first:
 
 1. Install the latest [Microsoft Visual C++ Redistributable (x64)](https://aka.ms/vs/17/release/vc_redist.x64.exe) and restart.
-1. Use a 64-bit **Python 3.12** from python.org (not Anaconda or the Microsoft Store), delete `.venv` and run `setup_venv.bat` again. The script prefers Python 3.12, then 3.11, then 3.13 when the `py` launcher has them.
+1. With Anaconda: delete `.venv` and run `setup_venv.bat` again. It builds `.conda_env` from conda-forge instead of a venv from Anaconda's Python.
+1. Without Anaconda: use a 64-bit **Python 3.12** from python.org (not the Microsoft Store), delete `.venv` and run `setup_venv.bat` again. The script prefers Python 3.12, then 3.11, then 3.13 when the `py` launcher has them.
 1. Remove folders with their own Qt or `msvcp140.dll` (Anaconda, MiKTeX, other Qt apps) from `PATH`.
 1. Reinstall: `.venv\Scripts\python -m pip install --force-reinstall PySide6`.
 

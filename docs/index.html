@@ -210,7 +210,7 @@ footer{margin-top:4rem; color:var(--muted); font-size:.85rem; border-top:1px sol
 <h3>Windows</h3>
 <ol>
   <li>Install Python 3.10 or newer (64-bit).</li>
-  <li>Run <code>setup_venv.bat</code> once. It creates <code>.venv</code> and installs <code>requirements.txt</code>.</li>
+  <li>Run <code>setup_venv.bat</code> once. If Anaconda or Miniconda is installed, it creates a conda environment <code>.conda_env</code> with Python 3.12 from conda-forge (whose current C++ runtime lets PySide6 load); otherwise a venv <code>.venv</code>. Then it installs <code>requirements.txt</code> and checks that Qt loads. <code>setup_venv.bat venv</code> forces a plain venv.</li>
   <li>Start the GUI with <code>run_gui.bat</code>. You can drag a <code>.step</code> file or a project <code>.json</code> onto it, or pass it as an argument.</li>
 </ol>
 <h3>Any operating system</h3>

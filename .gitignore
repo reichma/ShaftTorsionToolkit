@@ -5,3 +5,4 @@ __pycache__/
 *_results/
 *.gif
 *.mp4
+.conda_env/
