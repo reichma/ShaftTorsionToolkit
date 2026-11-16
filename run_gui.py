@@ -1,4 +1,7 @@
-"""Start the Shaft Torsion Toolkit GUI:  python run_gui.py [file.step | project.json]"""
+"""Start the Shaft Torsion Toolkit GUI:  python run_gui.py [file.step | project.json]
+
+    python run_gui.py --check   only test that Qt (PySide6) can be loaded
+"""
 import os
 import platform
 import struct
@@ -47,6 +50,18 @@ def _qt_diagnosis(err):
         if os.path.isfile(dll):
             lines += [f"C++ runtime: {dll}  version {_dll_version(dll)}",
                       "             Windows loads this copy first; PySide6 >= 6.8 needs 14.40 or newer."]
+    # the copy shipped with PySide6 and the system-wide one (VC++ redistributable)
+    try:
+        import importlib.util
+        spec = importlib.util.find_spec("PySide6")
+        pyside_dir = list(spec.submodule_search_locations)[0] if spec else None
+    except Exception:
+        pyside_dir = None
+    for label, d in (("PySide6 own", pyside_dir),
+                     ("System32", os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32"))):
+        dll = os.path.join(d, "msvcp140.dll") if d else ""
+        if dll and os.path.isfile(dll):
+            lines.append(f"msvcp140.dll ({label}): version {_dll_version(dll)}  {dll}")
     hits, seen = [], set()
     for d in os.environ.get("PATH", "").split(os.pathsep):
         key = os.path.normcase(os.path.normpath(d)) if d else ""
@@ -82,10 +97,17 @@ def _qt_diagnosis(err):
 
 
 if __name__ == "__main__":
+    # "--check": only test that Qt loads (used by setup_venv.bat), print a diagnosis if not
+    check_only = "--check" in sys.argv[1:]
+    if check_only:
+        sys.argv.remove("--check")
     try:
         import PySide6.QtCore  # noqa: F401  - load Qt first to give a clear message
     except ImportError as exc:
         print(_qt_diagnosis(exc), file=sys.stderr)
         sys.exit(1)
+    if check_only:
+        print(f"Qt OK (PySide6 {PySide6.QtCore.qVersion()}, Python {sys.version.split()[0]})")
+        sys.exit(0)
     from shaft_torsion.gui import main
     sys.exit(main())
