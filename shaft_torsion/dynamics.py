@@ -5,6 +5,7 @@
 * ``J``   inertias of the sections (step 1)
 * ``k``   springs between neighbouring inertias (step 2)
 * ``c``   dampers between neighbouring inertias (user)
+* ``k_abs`` spring of each inertia to ground (elastic mounts, user)
 * ``c_abs`` damping of each inertia to ground (bearings, user)
 * optional spring/damper from one inertia to ground (the FEM clamp)
 * loads ``M_i(t)``: constant, step, ramp, sine, sweep, pulse or a formula
@@ -84,6 +85,7 @@ class TorsionalModel:
     k: np.ndarray                         # (n-1,) [N m/rad]
     c: np.ndarray = None                  # (n-1,) [N m s/rad]
     c_abs: np.ndarray = None              # (n,) damping to ground [N m s/rad]
+    k_abs: np.ndarray = None              # (n,) spring to ground [N m/rad]
     ground_node: int = -1                 # inertia connected to ground; -1 = free-free
     k_ground: float = 0.0
     c_ground: float = 0.0
@@ -95,7 +97,9 @@ class TorsionalModel:
         self.k = np.asarray(self.k, float)
         self.c = np.zeros(n - 1) if self.c is None else np.asarray(self.c, float)
         self.c_abs = np.zeros(n) if self.c_abs is None else np.asarray(self.c_abs, float)
-        if len(self.k) != n - 1 or len(self.c) != n - 1 or len(self.c_abs) != n:
+        self.k_abs = np.zeros(n) if self.k_abs is None else np.asarray(self.k_abs, float)
+        if (len(self.k) != n - 1 or len(self.c) != n - 1 or len(self.c_abs) != n
+                or len(self.k_abs) != n):
             raise ValueError("inconsistent model sizes")
         if np.any(self.J <= 0):
             raise ValueError("all inertias must be > 0")
@@ -107,7 +111,7 @@ class TorsionalModel:
     def matrices(self):
         n = self.n
         M = np.diag(self.J)
-        K = np.zeros((n, n))
+        K = np.diag(self.k_abs.copy())
         C = np.diag(self.c_abs.copy())
         for i in range(n - 1):
             for mat, val in ((K, self.k[i]), (C, self.c[i])):
@@ -192,6 +196,8 @@ class TorsionalModel:
         if 0 <= self.ground_node < n:
             g = self.ground_node
             out["ground_torque"] = self.k_ground * th[g] + self.c_ground * om[g]
+        # torque each inertia passes to ground through its own spring / damper
+        out["support_torque"] = self.k_abs[:, None] * th + self.c_abs[:, None] * om
         return out
 
     def frf(self, node, freqs):
@@ -217,5 +223,5 @@ class TorsionalModel:
 
     def to_dict(self):
         return {"J": self.J.tolist(), "k": self.k.tolist(), "c": self.c.tolist(),
-                "c_abs": self.c_abs.tolist(), "ground_node": self.ground_node,
+                "c_abs": self.c_abs.tolist(), "k_abs": self.k_abs.tolist(), "ground_node": self.ground_node,
                 "k_ground": self.k_ground, "c_ground": self.c_ground}

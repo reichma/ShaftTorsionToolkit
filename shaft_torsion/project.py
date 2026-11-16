@@ -56,6 +56,7 @@ def model_from_results(geo, res, ground=True, c=None, c_abs=None) -> TorsionalMo
 
 def model_from_dict(d) -> TorsionalModel:
     return TorsionalModel(J=d["J"], k=d["k"], c=d.get("c"), c_abs=d.get("c_abs"),
+                          k_abs=d.get("k_abs"),
                           ground_node=d.get("ground_node", -1), k_ground=d.get("k_ground", 0.0),
                           c_ground=d.get("c_ground", 0.0))
 

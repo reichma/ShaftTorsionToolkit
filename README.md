@@ -73,9 +73,10 @@ How the stiffness is computed:
 * **J, k and c are editable.** You can add attached parts, a coupling stiffness, and so on.
 * **Damping:**
   * a damper `c` per spring (between inertias)
-  * damping to ground per inertia (for example, bearings)
+  * damping to ground per inertia (for example, bearing drag)
   * *c = β·k* (stiffness-proportional)
   * *c for ζ at the 1st elastic mode*
+* **Spring to ground per inertia** (*k to ground* column), for example an elastic mount or a coupling to the housing at any position along the shaft. *c = β·k* also sets the damper of every inertia that has such a spring.
 * **Boundary condition:** free–free, or grounded at the FEM clamp. Grounded uses the spring from the clamp to the nearest inertia (from the FEM) plus an optional damper.
 * **Loads** (torque on inertia #):
   * constant, step, ramp, pulse

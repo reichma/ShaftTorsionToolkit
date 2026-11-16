@@ -281,11 +281,12 @@ python run_gui.py examples/stepped_shaft_project.json</code></pre>
 <h3 id="tab-dynamics">4.3 Tab 3 — Vibration model</h3>
 <ul>
   <li><b>Build model</b> fills the tables from steps 1 and 2. <b>J, k and c are editable</b>, so you can add attached parts (hubs, gears), a coupling stiffness, or values from other sources.</li>
+  <li><b>Spring to ground per inertia</b> (<i>k to ground</i> column) — an elastic mount or a coupling to the housing at any position along the shaft.</li>
   <li><b>Damping</b>
     <ul>
       <li>a damper <i>c</i> per spring (between inertias),</li>
       <li>damping to ground per inertia (bearings, fluid),</li>
-      <li><i>c = β·k</i> — stiffness-proportional damping for all springs,</li>
+      <li><i>c = β·k</i> — stiffness-proportional damping for all springs, including the springs to ground,</li>
       <li><i>c for ζ at the 1st elastic mode</i> — picks β so that the first elastic mode gets the damping ratio ζ.</li>
     </ul>
   </li>
@@ -351,7 +352,7 @@ python run_gui.py examples/stepped_shaft_project.json</code></pre>
 <div class="formula">J θ̈ + C θ̇ + K θ = M(t)</div>
 <ul>
   <li><b>J</b> = diag(<i>J</i>₁ … <i>J</i><sub>n</sub>).</li>
-  <li><b>K</b>, <b>C</b>: tridiagonal chain assembled from <i>k</i><sub>i</sub>, <i>c</i><sub>i</sub>; <b>C</b> also gets the damping to ground <i>c</i><sub>abs,i</sub> on the diagonal; the grounded inertia gets <i>k</i><sub>ground</sub>, <i>c</i><sub>ground</sub>.</li>
+  <li><b>K</b>, <b>C</b>: tridiagonal chain assembled from <i>k</i><sub>i</sub>, <i>c</i><sub>i</sub>; <b>K</b> and <b>C</b> also get the spring and damping to ground <i>k</i><sub>abs,i</sub>, <i>c</i><sub>abs,i</sub> on the diagonal; the grounded inertia gets <i>k</i><sub>ground</sub>, <i>c</i><sub>ground</sub>.</li>
   <li><b>Modes:</b> generalised eigenproblem <b>K</b>φ = ω²<b>J</b>φ. Modal damping ratio ζ<sub>j</sub> = φ<sub>j</sub><sup>T</sup><b>C</b>φ<sub>j</sub> / (2 m<sub>j</sub> ω<sub>j</sub>) (diagonal of the modal damping matrix). Exact damped eigenvalues are available via <code>complex_modes()</code>.</li>
   <li><b>Time integration:</b> Newmark, average acceleration (β = ¼, γ = ½): unconditionally stable, no numerical damping. The effective matrix is LU-factorised once.</li>
   <li><b>Spring torque</b> between i and i+1: <i>k</i><sub>i</sub>(θ<sub>i+1</sub> − θ<sub>i</sub>) + <i>c</i><sub>i</sub>(θ̇<sub>i+1</sub> − θ̇<sub>i</sub>).</li>

@@ -76,3 +76,25 @@ def test_loads():
     assert np.allclose(Load(kind="ramp", amplitude=4, t_start=0, t_end=0.5)(t), [0, 2, 4, 4])
     assert np.allclose(Load(kind="pulse", amplitude=1, t_start=0.2, t_end=0.6)(t), [0, 1, 1, 0])
     assert np.allclose(Load(kind="expression", expression="2*t")(t), 2 * t)
+
+
+def test_spring_to_ground_per_inertia():
+    from shaft_torsion.project import model_from_dict
+    # two inertias, each held by its own mount: closed-form 2-DOF frequencies
+    J1, J2, k, k1, k2 = 0.1, 0.3, 1e4, 2e3, 5e3
+    m = TorsionalModel([J1, J2], [k], k_abs=[k1, k2])
+    K = np.array([[k + k1, -k], [-k, k + k2]])
+    w2 = np.linalg.eigvals(np.linalg.solve(np.diag([J1, J2]), K)).real
+    w2.sort()
+    f, _, _ = m.modes()
+    assert np.allclose(f, np.sqrt(w2) / (2 * np.pi), rtol=1e-9)
+    # a mount on the middle inertia: no rigid-body mode any more
+    mid = TorsionalModel([0.1, 0.2, 0.1], [1e4, 1e4], k_abs=[0, 3e3, 0])
+    assert mid.modes()[0][0] > 1.0
+    # support torque balances a static load
+    mid.c_abs = np.array([0, 50.0, 0])
+    out = mid.simulate([Load(0, "constant", 10.0)], 3.0, 1e-3)
+    assert out["support_torque"][1, -1] == pytest.approx(10.0, rel=1e-3)
+    # saved and loaded with the project
+    assert np.allclose(model_from_dict(m.to_dict()).k_abs, [k1, k2])
+    assert np.allclose(model_from_dict({"J": [1.0], "k": []}).k_abs, [0.0])   # old project files

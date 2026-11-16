@@ -344,8 +344,10 @@ class MainWindow(QMainWindow):
         b = QPushButton("Build model from steps 1 + 2")
         b.clicked.connect(self.build_model)
         v.addWidget(b)
-        v.addWidget(QLabel("Inertias (editable - e.g. add attached parts):"))
-        self.tbl_J = make_table(["#", "J [kg·m²]", "damping to ground [N·m·s/rad]"])
+        v.addWidget(QLabel("Inertias (editable - e.g. add attached parts, elastic mounts, bearings):"))
+        self.tbl_J = make_table(["#", "J [kg·m²]", "k to ground [N·m/rad]", "c to ground [N·m·s/rad]"])
+        self.tbl_J.setToolTip("k / c to ground: spring and damper from this inertia to the housing,\n"
+                              "e.g. an elastic mount (k) or bearing drag (c). 0 = none.")
         v.addWidget(self.tbl_J)
         v.addWidget(QLabel("Springs / dampers between inertias (editable):"))
         self.tbl_k = make_table(["between", "k [N·m/rad]", "c [N·m·s/rad]"])
@@ -717,7 +719,7 @@ class MainWindow(QMainWindow):
         n = len(self.geo.sections)
         self.tbl_J.setRowCount(n)
         for i, s in enumerate(self.geo.sections):
-            set_row(self.tbl_J, i, [i + 1, s.J, 0.0], editable_cols=(1, 2))
+            set_row(self.tbl_J, i, [i + 1, s.J, 0.0, 0.0], editable_cols=(1, 2, 3))
         self.tbl_k.setRowCount(n - 1)
         for i in range(n - 1):
             k = self.res.k_spring[i] if self.res is not None else 0.0
@@ -730,7 +732,8 @@ class MainWindow(QMainWindow):
         if pm and len(pm.get("J", [])) == n:          # values saved in the project file
             for i in range(n):
                 self.tbl_J.item(i, 1).setText(f"{pm['J'][i]:.6g}")
-                self.tbl_J.item(i, 2).setText(f"{pm['c_abs'][i]:.6g}")
+                self.tbl_J.item(i, 2).setText(f"{pm.get('k_abs', [0.0] * n)[i]:.6g}")
+                self.tbl_J.item(i, 3).setText(f"{pm['c_abs'][i]:.6g}")
             for i in range(n - 1):
                 if pm["k"][i] > 0:
                     self.tbl_k.item(i, 1).setText(f"{pm['k'][i]:.6g}")
@@ -751,7 +754,10 @@ class MainWindow(QMainWindow):
         if n == 0:
             raise ValueError("Build the vibration model first.")
         J = [cell_float(self.tbl_J, i, 1) for i in range(n)]
-        ca = [cell_float(self.tbl_J, i, 2) for i in range(n)]
+        ka = [cell_float(self.tbl_J, i, 2) for i in range(n)]
+        ca = [cell_float(self.tbl_J, i, 3) for i in range(n)]
+        if any(x < 0 for x in ka + ca):
+            raise ValueError("Spring and damping values to ground must be >= 0.")
         k = [cell_float(self.tbl_k, i, 1) for i in range(n - 1)]
         c = [cell_float(self.tbl_k, i, 2) for i in range(n - 1)]
         if any(x <= 0 for x in k):
@@ -759,7 +765,7 @@ class MainWindow(QMainWindow):
         gnode = -1
         if self.cmb_bc.currentIndex() == 1:
             gnode = self.res.ground_index if self.res is not None else 0
-        self.model = TorsionalModel(J, k, c, ca, ground_node=gnode, k_ground=self.ed_kg.value(),
+        self.model = TorsionalModel(J, k, c, ca, k_abs=ka, ground_node=gnode, k_ground=self.ed_kg.value(),
                                     c_ground=self.ed_cg.value())
         return self.model
 
@@ -767,6 +773,10 @@ class MainWindow(QMainWindow):
         beta = self.ed_beta.value()
         for i in range(self.tbl_k.rowCount()):
             self.tbl_k.item(i, 2).setText(f"{beta * cell_float(self.tbl_k, i, 1):.6g}")
+        for i in range(self.tbl_J.rowCount()):        # elastic mounts; rows without k keep their c
+            ka = cell_float(self.tbl_J, i, 2)
+            if ka > 0:
+                self.tbl_J.item(i, 3).setText(f"{beta * ka:.6g}")
         if self.cmb_bc.currentIndex() == 1:
             self.ed_cg.setValue(beta * self.ed_kg.value())
 
