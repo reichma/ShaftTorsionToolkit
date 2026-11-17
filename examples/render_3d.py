@@ -70,7 +70,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("project")
     ap.add_argument("out", nargs="?")
-    ap.add_argument("--modes", type=int, default=4, help="number of mode shapes to render")
+    ap.add_argument("--modes", type=int, default=4, help="number of elastic mode shapes to render")
     a = ap.parse_args(argv)
     project = os.path.abspath(a.project)
     out = os.path.abspath(a.out or os.path.splitext(project)[0] + "_results")
@@ -107,7 +107,8 @@ def main(argv=None):
     win.cmb_color.setCurrentIndex(0)   # coloured by rotation angle
     win.chk_auto.setChecked(True)
     win.cmb_src.setCurrentIndex(1)     # mode shapes
-    for j in range(1, min(a.modes, len(f)) + 1):
+    elastic = [j + 1 for j in range(len(f)) if f[j] > 1e-3 * f.max()]   # skip rigid-body modes (free-free)
+    for j in elastic[:a.modes]:
         win.sp_mode.setValue(j)
         win.prepare_animation()
         win.view_tabs.setCurrentIndex(0)

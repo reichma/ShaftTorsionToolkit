@@ -139,6 +139,21 @@ A 20 N·m sweep on the output end excites them in two parts. A slow sweep from 2
 
 The J and k values in the file come from a FEM run with the automatic mesh. Load the file in the GUI, then split and run the FEM; the model is then built from the values in the file.
 
+### Example: crankshafts with 3, 4 and 5 cylinders
+
+`examples/make_crankshaft.py <3|4|5>` builds an inline crankshaft as one STEP solid and writes a project file for it. The crankshaft has a damper pulley at the front, a main bearing between every pair of cylinders, webs with counterweights and a flywheel. The crankshafts are generic (stroke 86 mm, cylinder pitch 88 mm, no fillets or oil bores), not copies of real engines. The crank pins follow the usual firing orders: 3 cylinders 0/120/240°, 4 cylinders 0/180/180/0°, 5 cylinders 0/144/216/288/72°. The cut planes lie in the middle of the main journals, which gives one inertia for the pulley end, one per crank throw and one for the flywheel end.
+
+The project files `crankshaft_<n>cyl_project.json` contain a free–free model with stiffness-proportional damping (ζ = 2 % at the first elastic mode). A 100 N·m sweep acts on the first crank throw, from 0.6 to 1.4 times the first elastic frequency over 1 s. It starts as a cosine (`phase_deg` 90): a sine start gives the free–free shaft a net angular impulse, and the whole shaft then turns away as a rigid body.
+
+| | 3 cylinders | 4 cylinders | 5 cylinders |
+|---|---|---|---|
+| total J (of which flywheel) [kg·m²] | 0.228 (0.188) | 0.238 (0.188) | 0.248 (0.188) |
+| elastic modes [Hz] | 427, 1051, 1616, 2269 | 360, 837, 1397, 2145, 2610 | 311, 742, 1256, 1613, 2131, 2292 |
+| largest rotation in the sweep | 0.72° at 435 Hz | 0.87° at 368 Hz | 1.00° at 319 Hz |
+| largest torque in the shaft | 1852 N·m | 2040 N·m | 2095 N·m |
+
+In the first elastic mode, the pulley end swings against the flywheel, which barely moves. The longer the crankshaft, the softer it is, so this mode drops from 427 Hz to 311 Hz. `python examples/render_3d.py examples/crankshaft_4cyl_project.json` renders the 3-D mode shapes and the sweep response; it skips the 0 Hz rigid-body mode.
+
 ## Verification
 
 Run `python -m pytest tests -q`. The tests check against closed-form results:
@@ -163,4 +178,4 @@ Run `python -m pytest tests -q`. The tests check against closed-form results:
 | `shaft_torsion/dynamics.py` | Lumped model, loads, modes, Newmark simulation, FRF |
 | `shaft_torsion/gui.py` | PySide6 + PyVista GUI |
 | `shaft_torsion/project.py`, `cli.py` | Project JSON, CSV export, batch run |
-| `examples/` | `plain_shaft.step`, `stepped_shaft.step` (generator script included), example project; `gear_shaft.step` + `gear_shaft_project.json`: 420 mm gearbox output shaft with a keyed gear (3-solid assembly, generator `make_gear_shaft.py`); `gear_shaft_mounted_sweep.json`: the same shaft on two elastic couplings under a frequency sweep; `render_3d.py`: saves the 3-D results of a project as PNG and GIF |
+| `examples/` | `plain_shaft.step`, `stepped_shaft.step` (generator script included), example project; `gear_shaft.step` + `gear_shaft_project.json`: 420 mm gearbox output shaft with a keyed gear (3-solid assembly, generator `make_gear_shaft.py`); `gear_shaft_mounted_sweep.json`: the same shaft on two elastic couplings under a frequency sweep; `render_3d.py`: saves the 3-D results of a project as PNG and GIF; `make_crankshaft.py` + `crankshaft_<3|4|5>cyl.step` / `_project.json`: inline crankshafts with pulley and flywheel |

@@ -1,0 +1,93 @@
+{
+  "step_file": "crankshaft_3cyl.step",
+  "axis": {
+    "mode": "custom",
+    "origin_mm": [
+      0,
+      0,
+      0
+    ],
+    "direction": [
+      1,
+      0,
+      0
+    ]
+  },
+  "density": 7850.0,
+  "cuts_mm": [
+    63.0,
+    151.0,
+    239.0,
+    327.0
+  ],
+  "fem": {
+    "E_GPa": 210.0,
+    "nu": 0.3,
+    "torque": 1000.0,
+    "fixed_end": "start",
+    "mesh_size_mm": 0.0,
+    "order": 2,
+    "end_band_mm": 0.0,
+    "lumped_at": "middle"
+  },
+  "model": {
+    "J": [
+      0.0098874,
+      0.00996059,
+      0.00996059,
+      0.00996059,
+      0.188311
+    ],
+    "k": [
+      259798.0,
+      367408.0,
+      379512.0,
+      1464130.0
+    ],
+    "c": [
+      3.87248,
+      5.47649,
+      5.6569,
+      21.824
+    ],
+    "k_abs": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "c_abs": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "ground_node": -1,
+    "k_ground": 0.0,
+    "c_ground": 0.0
+  },
+  "loads": [
+    {
+      "node": 1,
+      "kind": "sweep",
+      "amplitude": 100.0,
+      "frequency": 256,
+      "f_end": 598,
+      "phase_deg": 90.0,
+      "t_start": 0.0,
+      "t_end": 1.0
+    }
+  ],
+  "simulation": {
+    "t_end": 1.1,
+    "dt": 0.0
+  },
+  "frf": {
+    "node": 2,
+    "f_min": 10.0,
+    "f_max": 2700.0,
+    "n": 1500
+  }
+}
