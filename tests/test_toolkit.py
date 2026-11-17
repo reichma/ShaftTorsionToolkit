@@ -98,3 +98,13 @@ def test_spring_to_ground_per_inertia():
     # saved and loaded with the project
     assert np.allclose(model_from_dict(m.to_dict()).k_abs, [k1, k2])
     assert np.allclose(model_from_dict({"J": [1.0], "k": []}).k_abs, [0.0])   # old project files
+
+
+def test_load_step_after_second_order_fem(tilted_cylinder):
+    """A FEM run leaves Mesh.ElementOrder = 2 in gmsh; the next import must still
+    give a display surface (regression: surface was None)."""
+    from shaft_torsion.gmsh_session import gmsh_session
+    with gmsh_session() as gm:
+        gm.option.setNumber("Mesh.ElementOrder", 2)
+    info = g.load_step(tilted_cylinder[0])
+    assert info.surface is not None and len(info.surface[1]) > 0

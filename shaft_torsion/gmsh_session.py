@@ -21,6 +21,9 @@ def gmsh_session(verbose: bool = False):
             gmsh.initialize(interruptible=False)
         gmsh.option.setNumber("General.Terminal", 0)
         gmsh.clear()
+        # options outlive gmsh.clear(): without this, Mesh.ElementOrder = 2 from a FEM run
+        # makes the next STEP import produce 6-node triangles and an empty display surface
+        gmsh.option.restoreDefaults()
         gmsh.option.setNumber("General.Terminal", 1 if verbose else 0)
         gmsh.option.setNumber("General.Verbosity", 2 if verbose else 0)
         gmsh.option.setString("Geometry.OCCTargetUnit", "M")
