@@ -108,3 +108,31 @@ def test_load_step_after_second_order_fem(tilted_cylinder):
         gm.option.setNumber("Mesh.ElementOrder", 2)
     info = g.load_step(tilted_cylinder[0])
     assert info.surface is not None and len(info.surface[1]) > 0
+
+
+def test_fem_modal_torsion_frequencies(tilted_cylinder):
+    """3-D FE modes of the cylinder: torsion frequencies n c / 2L (free) and c / 4L (clamped),
+    bending and axial modes recognised, lumped model paired with the right FE mode."""
+    from shaft_torsion.modal import match_modes, run_modal
+    path, _ = tilted_cylinder
+    info = g.load_step(path)
+    s0, s1 = g.axial_range(info.surface[0], info.auto_axis)
+    geo = g.split_model(path, info.auto_axis, [s0 + 0.1 * i for i in range(1, 4)], RHO, (s0, s1))
+    st = FemSettings(E=E, nu=NU, mesh_size=0.008, order=2)
+    c = np.sqrt(G / RHO)
+    free = run_modal(geo, st, n_modes=10, bc="free")
+    assert free.kind[:6] == ["rigid"] * 6
+    tors = free.freq[[k == "torsion" for k in free.kind]]
+    assert tors[0] == pytest.approx(c / (2 * L), rel=2e-3)
+    assert "bending" in free.kind and "axial" in free.kind
+    clamped = run_modal(geo, st, n_modes=6, bc="clamped")
+    tors = clamped.freq[[k == "torsion" for k in clamped.kind]]
+    assert tors[0] == pytest.approx(c / (4 * L), rel=2e-3)
+    # lumped model of 4 equal sections, free-free: its 1st elastic mode is the FE torsion mode
+    res = run_torsion(geo, st)
+    lumped = TorsionalModel([s.J for s in geo.sections], res.k_spring)
+    f, phi, _ = lumped.modes()
+    rows = match_modes(free, f, phi)
+    i, fl, j, ff, dev, mac_, et = rows[0]
+    assert free.kind[j - 1] == "torsion" and mac_ > 0.99
+    assert abs(dev) < 5.0                     # lumped (4 rigid discs) vs. continuous shaft

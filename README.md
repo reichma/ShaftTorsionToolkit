@@ -68,6 +68,14 @@ How the stiffness is computed:
 * The spring between inertias i and i+1 is `k_i = T / |θ_mid,i+1 − θ_mid,i|`.
 * The table also shows each section's own stiffness (between its cut planes), the stiffness from the clamp to the nearest inertia, and the total stiffness.
 
+**Modal check: 3-D FEM vs. lumped model.** The vibration results of tab 3 come from the lumped model; the FEM only provides its springs. *FEM modal analysis & compare* checks that model. It computes the lowest natural modes of the whole 3-D solid, using the same mesh with a consistent mass matrix and the boundary condition of tab 3 (free-free, or clamped at the FEM clamp face). Springs to ground are left out.
+
+* Every FE mode gets a type from where its kinetic energy goes. Each thin axial slice is fitted with a rigid-body motion: rotation about the axis is **torsion**, motion along the axis is **axial**, lateral motion and tilting are **bending**, and the rest deforms the cross-section (**local**, e.g. a flywheel umbrella mode). Below 60 % for every type, the mode is **coupled**.
+* Each elastic lumped mode is paired one-to-one with the FE mode that best matches its section rotations (MAC × torsion share). The table shows the frequency difference (green ≤ 5 %, yellow larger) and the MAC. A plot shows all FE modes with the pairs, and the paired mode shapes.
+* Click a row to animate that FE mode in the 3-D view.
+
+The same check without the GUI: `python examples/fem_modal_check.py project.json [output_folder] [--modes 40]`. It writes `fem_modal_check.png` and `fem_modes.csv`.
+
 ### Tab 3: Vibration model
 
 * **J, k and c are editable.** You can add attached parts, a coupling stiffness, and so on.
@@ -154,6 +162,18 @@ The project files `crankshaft_<n>cyl_project.json` contain a free–free model w
 
 In the first elastic mode, the pulley end swings against the flywheel, which barely moves. The longer the crankshaft, the softer it is, so this mode drops from 427 Hz to 311 Hz. `python examples/render_3d.py examples/crankshaft_4cyl_project.json` renders the 3-D mode shapes and the sweep response; it skips the 0 Hz rigid-body mode.
 
+FEM modal check of the 4-cylinder crankshaft (free-free, 131 000 DOF, 40 s):
+
+| Lumped mode | f lumped [Hz] | FE mode | f FE [Hz] | Difference | MAC | Torsion share of the FE mode |
+|---|---|---|---|---|---|---|
+| 2 | 360 | 9 | 359 | +0.4 % | 1.00 | 96 % |
+| 3 | 837 | 13 | 832 | +0.6 % | 0.95 | 88 % |
+| 4 | 1397 | 17 | 1318 | +6.0 % | 0.71 | 78 % |
+| 5 | 2145 | 20 | 1733 | +24 % | 0.66 | 49 % |
+| 6 | 2610 | 32 | 3220 | −19 % | 0.37 | 33 % |
+
+The lumped model holds for the first two torsional modes, the ones the sweep excites. Above about 1300 Hz, torsion and bending couple through the crank webs: the FE modes are partly bending, and the lumped model, with one rigid inertia per crank throw, no longer describes them. Between the torsional modes there are bending modes from 159 Hz on, and flywheel disc modes at 1907 Hz, which a torsional model does not contain.
+
 ## Verification
 
 Run `python -m pytest tests -q`. The tests check against closed-form results:
@@ -161,6 +181,7 @@ Run `python -m pytest tests -q`. The tests check against closed-form results:
 * **Section inertias** of a Ø40 mm cylinder along an oblique axis: `ρ·π·d⁴/32·L`, accurate to 1e-6.
 * **FEM stiffness** (between inertias, per section, clamp to inertia, total) against `G·Ip/L`: within 0.2 %. With a 6 mm mesh the error is 0.001 %.
 * **Two-inertia natural frequency**, the **step response** of a single grounded inertia, and the **damping ratio**.
+* **FEM modal analysis** of the cylinder: first torsional mode against `c/2L` (free-free) and `c/4L` (clamped), with `c = √(G/ρ)`, within 0.2 %. Bending and axial modes are recognised, and the lumped model is paired with the FE torsion mode.
 
 ## Notes / limits
 
@@ -175,7 +196,8 @@ Run `python -m pytest tests -q`. The tests check against closed-form results:
 |---|---|
 | `shaft_torsion/geometry.py` | STEP import, axis, splitting, inertias, display tessellation |
 | `shaft_torsion/fem.py` | Mesh, tet4/tet10 stiffness assembly, boundary conditions, solver, section rotations, stiffness |
+| `shaft_torsion/modal.py` | FEM modal analysis (mass matrix, shift-invert Lanczos), mode types, pairing with the lumped model |
 | `shaft_torsion/dynamics.py` | Lumped model, loads, modes, Newmark simulation, FRF |
 | `shaft_torsion/gui.py` | PySide6 + PyVista GUI |
 | `shaft_torsion/project.py`, `cli.py` | Project JSON, CSV export, batch run |
-| `examples/` | `plain_shaft.step`, `stepped_shaft.step` (generator script included), example project; `gear_shaft.step` + `gear_shaft_project.json`: 420 mm gearbox output shaft with a keyed gear (3-solid assembly, generator `make_gear_shaft.py`); `gear_shaft_mounted_sweep.json`: the same shaft on two elastic couplings under a frequency sweep; `render_3d.py`: saves the 3-D results of a project as PNG and GIF; `make_crankshaft.py` + `crankshaft_<3|4|5>cyl.step` / `_project.json`: inline crankshafts with pulley and flywheel |
+| `examples/` | `plain_shaft.step`, `stepped_shaft.step` (generator script included), example project; `gear_shaft.step` + `gear_shaft_project.json`: 420 mm gearbox output shaft with a keyed gear (3-solid assembly, generator `make_gear_shaft.py`); `gear_shaft_mounted_sweep.json`: the same shaft on two elastic couplings under a frequency sweep; `render_3d.py`: saves the 3-D results of a project as PNG and GIF; `fem_modal_check.py`: FEM modal check of a project's lumped model; `make_crankshaft.py` + `crankshaft_<3|4|5>cyl.step` / `_project.json`: inline crankshafts with pulley and flywheel |

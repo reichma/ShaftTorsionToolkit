@@ -11,7 +11,7 @@ import traceback
 
 import numpy as np
 from PySide6.QtCore import QObject, QThread, Qt, QTimer, Signal
-from PySide6.QtGui import QAction, QDoubleValidator
+from PySide6.QtGui import QAction, QColor, QDoubleValidator
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QDoubleSpinBox,
                                QFileDialog, QFormLayout, QGridLayout, QGroupBox, QHBoxLayout,
                                QHeaderView, QLabel, QLineEdit, QMainWindow, QMessageBox,
@@ -29,6 +29,7 @@ from . import geometry as g                                             # noqa: 
 from . import project as prj                                            # noqa: E402
 from .dynamics import LOAD_KINDS, Load, TorsionalModel                  # noqa: E402
 from .fem import FemSettings, auto_mesh_size, run_torsion               # noqa: E402
+from .modal import match_modes, plot_comparison, run_modal              # noqa: E402
 
 SECTION_COLORS = ["#4C78A8", "#F58518", "#54A24B", "#E45756", "#72B7B2", "#EECA3B",
                   "#B279A2", "#FF9DA6", "#9D755D", "#BAB0AC"]
@@ -157,6 +158,9 @@ class MainWindow(QMainWindow):
         self.anim_index = 0
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._advance_frame)
+        self.modal = None         # ModalResult (FEM modal check)
+        self.fe_timer = QTimer(self)
+        self.fe_timer.timeout.connect(self._fe_mode_frame)
 
         # ---- layout: left controls | right 3-D + plots
         split = QSplitter(Qt.Horizontal)
@@ -378,6 +382,38 @@ class MainWindow(QMainWindow):
         self.ed_warp.setToolTip("0 = automatic")
         h.addWidget(self.ed_warp)
         v.addLayout(h)
+
+        gb = QGroupBox("Modal check: 3-D FEM vs. lumped model")
+        gv = QVBoxLayout(gb)
+        lbl = QLabel("Natural modes of the whole 3-D solid (same mesh, consistent mass), all types: "
+                     "torsion, bending, axial, local. Every elastic mode of the lumped model (tab 3: "
+                     "J, k and boundary condition) is paired with the FE mode that matches it best.")
+        lbl.setWordWrap(True)
+        gv.addWidget(lbl)
+        h = QHBoxLayout()
+        h.addWidget(QLabel("FE modes"))
+        self.sp_fe_modes = QSpinBox()
+        self.sp_fe_modes.setRange(1, 300)
+        self.sp_fe_modes.setValue(30)
+        h.addWidget(self.sp_fe_modes)
+        b = QPushButton("FEM modal analysis && compare")
+        b.setStyleSheet("font-weight: bold")
+        b.clicked.connect(self.run_fem_modal)
+        h.addWidget(b, 1)
+        gv.addLayout(h)
+        self.tbl_fe_modes = make_table(["FE #", "f [Hz]", "type", "torsion", "bending", "lumped #",
+                                        "f lumped [Hz]", "diff [%]", "MAC"], False)
+        self.tbl_fe_modes.setMinimumHeight(220)
+        self.tbl_fe_modes.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.tbl_fe_modes.setToolTip("Click a row to animate that FE mode shape in the 3-D view.\n"
+                                     "torsion / bending: share of the kinetic energy.\n"
+                                     "diff = f lumped / f FE - 1;  MAC = match of the section rotations.")
+        self.tbl_fe_modes.cellClicked.connect(lambda r, c: self.show_fe_mode(r))
+        gv.addWidget(self.tbl_fe_modes)
+        self.lbl_modal = QLabel("")
+        self.lbl_modal.setWordWrap(True)
+        gv.addWidget(self.lbl_modal)
+        v.addWidget(gb)
         v.addStretch()
         self._scroll(w, "2 FEM stiffness")
 
@@ -755,6 +791,89 @@ class MainWindow(QMainWindow):
 
         self.run_bg(run_torsion, done, self.geo, self.fem_settings())
 
+    def run_fem_modal(self):
+        if self.geo is None:
+            QMessageBox.information(self, "FEM modal", "Split the model first (tab 1).")
+            return
+        try:
+            m = self.current_model()
+        except ValueError as exc:
+            QMessageBox.warning(self, "FEM modal", f"{exc}\n\nThe comparison needs the lumped model of tab 3.")
+            return
+        bc = "clamped" if m.ground_node >= 0 else "free"
+        lumped = TorsionalModel(m.J, m.k, ground_node=m.ground_node, k_ground=m.k_ground)
+        note = ""
+        if np.any(m.k_abs > 0):
+            note = "Springs to ground (k to ground) are left out: the FE model has no mounts."
+
+        def done(modal):
+            self.modal = modal
+            f_l, phi_l, _ = lumped.modes()
+            rows = match_modes(modal, f_l, phi_l)
+            pair = {r[2] - 1: r for r in rows}
+            self.tbl_fe_modes.setRowCount(len(modal.freq))
+            for j, (f, k, e) in enumerate(zip(modal.freq, modal.kind, modal.energy)):
+                r = pair.get(j)
+                set_row(self.tbl_fe_modes, j, [j + 1, f, k, f"{e[0]:.2f}", f"{e[2]:.2f}"]
+                        + ([r[0], r[1], f"{r[4]:+.1f}", f"{r[5]:.3f}"] if r else ["", "", "", ""]))
+                if r:
+                    color = QColor("#C8F0C8") if abs(r[4]) <= 5 else QColor("#FFE8A0")
+                    for c in range(9):
+                        self.tbl_fe_modes.item(j, c).setBackground(color)
+            txt = (f"Boundary condition: {modal.bc}.  {modal.n_dof} DOF, {modal.info['elements']} elements, "
+                   f"{modal.solve_time:.1f} s.")
+            if modal.freq.max() < max(f_l):
+                txt += (f"<br><b>The FE modes reach {modal.freq.max():.0f} Hz only - increase 'FE modes' "
+                        f"to cover the lumped modes up to {max(f_l):.0f} Hz.</b>")
+            self.lbl_modal.setText(txt + ("<br>" + note if note else "") +
+                                   "<br>Green: |diff| ≤ 5 %, yellow: larger.  Click a row to animate the mode.")
+            ax, ax2 = plot_comparison(self.fig, self.geo, modal, f_l, phi_l, rows)
+            interactive_legend(ax, fontsize=7, ncol=6, loc="upper center")
+            interactive_legend(ax2, fontsize=7, ncol=2)
+            self.canvas.draw()
+            self.view_tabs.setCurrentIndex(1)
+            self.msg("FEM modal check (lumped / FE): " +
+                     ", ".join(f"{r[1]:.0f}/{r[3]:.0f} Hz ({r[4]:+.1f} %)" for r in rows))
+
+        self.run_bg(run_modal, done, self.geo, self.fem_settings(), n_modes=self.sp_fe_modes.value(), bc=bc)
+
+    def show_fe_mode(self, j):
+        """Animate FE mode j (0-based) in the 3-D view, coloured by displacement."""
+        md = self.modal
+        if md is None or not 0 <= j < len(md.freq):
+            return
+        self.timer.stop()
+        self.fe_timer.stop()
+        cells = np.hstack([np.full((len(md.tets), 1), 4), md.tets]).ravel()
+        grid = pv.UnstructuredGrid(cells, np.full(len(md.tets), pv.CellType.TETRA), md.nodes * 1e3)
+        u = md.shapes[:, :, j].astype(float)
+        grid.point_data["u"] = u
+        grid.point_data["|u|"] = np.linalg.norm(u, axis=1)
+        try:
+            surf = grid.extract_surface(algorithm="dataset_surface")
+        except TypeError:                           # older PyVista
+            surf = grid.extract_surface()
+        p = self.plotter
+        p.clear()
+        self._fe_base = surf.points.copy()
+        self._fe_u = surf.point_data["u"] * 0.05 * self.geo.length * 1e3     # largest: 5 % of the length
+        self._fe_surf = surf
+        p.add_mesh(surf.copy(), style="wireframe", color="gray", opacity=0.08)
+        p.add_mesh(surf, scalars="|u|", cmap="jet", clim=[0, 1],
+                   scalar_bar_args={"title": "|u| (relative)", "color": "black"})
+        e = md.energy[j]
+        p.add_text(f"FE mode {j + 1}: {md.freq[j]:.1f} Hz, {md.kind[j]}  (torsion {e[0]:.0%}, "
+                   f"bending {e[2]:.0%}, axial {e[1]:.0%}, local {e[3]:.0%})", font_size=10, color="black")
+        p.reset_camera()
+        self.view_tabs.setCurrentIndex(0)
+        self._fe_phase = 0
+        self.fe_timer.start(40)
+
+    def _fe_mode_frame(self):
+        self._fe_phase = (self._fe_phase + 1) % 40
+        self._fe_surf.points = self._fe_base + np.sin(2 * np.pi * self._fe_phase / 40) * self._fe_u
+        self.plotter.render()
+
     # ================================================================== #
     # step 3
     # ================================================================== #
@@ -948,6 +1067,7 @@ class MainWindow(QMainWindow):
         return g.Axis(self.axis.origin * 1e3, self.axis.direction)
 
     def show_preview(self):
+        self.fe_timer.stop()
         """Raw (unsplit) model, axis and the planned cut planes."""
         if self.info is None or self.axis is None:
             return
@@ -1014,6 +1134,7 @@ class MainWindow(QMainWindow):
         self.ptr_mesh = pv.PolyData(self.ptr_p0.copy(), lines=np.array(lines).ravel())
 
     def show_split(self, color_by="section", clim=None):
+        self.fe_timer.stop()
         if self.geo is None:
             return
         p = self.plotter
@@ -1048,6 +1169,7 @@ class MainWindow(QMainWindow):
         self.plotter.camera_position = [tuple(c - ax.direction * 3 * L), tuple(c), tuple(ax.perpendicular())]
 
     def show_fem(self):
+        self.fe_timer.stop()
         r = self.res
         if r is None:
             return
@@ -1168,6 +1290,7 @@ class MainWindow(QMainWindow):
     # animation
     # ================================================================== #
     def prepare_animation(self):
+        self.fe_timer.stop()
         if self.geo is None:
             QMessageBox.information(self, "Animation", "Split the model first (tab 1).")
             return
@@ -1389,6 +1512,7 @@ class MainWindow(QMainWindow):
             self.plotter.screenshot(path)
 
     def closeEvent(self, ev):
+        self.fe_timer.stop()
         self.timer.stop()
         try:
             self.plotter.close()
