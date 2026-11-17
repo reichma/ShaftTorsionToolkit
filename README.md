@@ -122,6 +122,22 @@ Project file notes:
 * Load `node` is **0-based** in the JSON. The GUI shows it 1-based.
 * `"model": null` means the model is taken from the inertias and the FEM results.
 
+Saving the 3-D views and animations without opening a window:
+
+```bash
+python examples/render_3d.py examples/gear_shaft_mounted_sweep.json [output_folder] [--modes 4]
+```
+
+This runs the project through the GUI, with the window placed outside the visible screen, and writes PNG screenshots and GIF animations of the split model, the FEM rotation, the mode shapes and the time simulation at its largest rotation, plus the 2-D plots.
+
+### Example: mounted gear shaft under a frequency sweep
+
+`examples/gear_shaft_mounted_sweep.json` uses the gear shaft without the FEM clamp (free–free). The shaft hangs between two elastic couplings, entered as *k to ground*: 5000 N·m/rad on the drive end (inertia 1) and 10 000 N·m/rad on the output end (inertia 7). The modes are 168 Hz (the shaft rocks on the couplings), 3.99 kHz (the output end against the gear), and 8.57 and 9.18 kHz (the drive end and output end against the gear).
+
+A 20 N·m sweep on the output end excites them in two parts. A slow sweep from 20 to 400 Hz builds up the 168 Hz resonance to about 15 times the static rotation. A fast sweep from 1 to 10 kHz then excites the higher modes. A single linear sweep from 20 Hz to 10 kHz passes the first mode in about 1 ms, which is too short for the resonance to build up. The gear is a node of modes 2–4, so a load on the gear would excite only mode 1.
+
+The J and k values in the file come from a FEM run with the automatic mesh. Load the file in the GUI, then split and run the FEM; the model is then built from the values in the file.
+
 ## Verification
 
 Run `python -m pytest tests -q`. The tests check against closed-form results:
@@ -146,4 +162,4 @@ Run `python -m pytest tests -q`. The tests check against closed-form results:
 | `shaft_torsion/dynamics.py` | Lumped model, loads, modes, Newmark simulation, FRF |
 | `shaft_torsion/gui.py` | PySide6 + PyVista GUI |
 | `shaft_torsion/project.py`, `cli.py` | Project JSON, CSV export, batch run |
-| `examples/` | `plain_shaft.step`, `stepped_shaft.step` (generator script included), example project; `gear_shaft.step` + `gear_shaft_project.json`: 420 mm gearbox output shaft with a keyed gear (3-solid assembly, generator `make_gear_shaft.py`) |
+| `examples/` | `plain_shaft.step`, `stepped_shaft.step` (generator script included), example project; `gear_shaft.step` + `gear_shaft_project.json`: 420 mm gearbox output shaft with a keyed gear (3-solid assembly, generator `make_gear_shaft.py`); `gear_shaft_mounted_sweep.json`: the same shaft on two elastic couplings under a frequency sweep; `render_3d.py`: saves the 3-D results of a project as PNG and GIF |
