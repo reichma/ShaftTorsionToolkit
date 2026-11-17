@@ -85,6 +85,7 @@ How the stiffness is computed:
   * a formula in `t`, for example `500*sin(2*pi*50*t)*exp(-5*t)`
 * **Simulation** uses Newmark average acceleration, which is unconditionally stable. With Δt = 0 the step size is automatic: 20 steps per period of the highest mode.
 * **Plots:** angles, twist, spring torques, speeds, loads, and a receptance FRF.
+* **Legend:** click an entry to hide or show that channel; double-click to show only that channel, and double-click it again to show all. The y axis rescales to the visible channels.
 
 ### Tab 4: Animation
 

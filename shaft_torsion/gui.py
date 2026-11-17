@@ -80,6 +80,23 @@ def make_table(headers, editable=True):
     return t
 
 
+def interactive_legend(ax, **kw):
+    """Legend whose entries switch their channel on and off.
+
+    Click an entry: hide / show that channel.  Double-click: show only that
+    channel (double-click it again to show all).  The handling is done in
+    ``MainWindow._on_pick``."""
+    handles, labels = ax.get_legend_handles_labels()
+    leg = ax.legend(handles, labels, **kw)
+    leg_handles = getattr(leg, "legend_handles", None) or leg.legendHandles
+    leg._channels = {}
+    for lh, txt, artist in zip(leg_handles, leg.get_texts(), handles):
+        for a in (lh, txt):
+            a.set_picker(5)
+            leg._channels[a] = (artist, lh, txt)
+    return leg
+
+
 def set_row(table, r, values, editable_cols=()):
     for c, v in enumerate(values):
         if isinstance(v, float):
@@ -162,6 +179,7 @@ class MainWindow(QMainWindow):
         pl = QVBoxLayout(pw)
         self.fig = Figure(figsize=(8, 6), tight_layout=True)
         self.canvas = FigureCanvasQTAgg(self.fig)
+        self.canvas.mpl_connect("pick_event", self._on_pick)
         pl.addWidget(NavigationToolbar2QT(self.canvas, pw))
         pl.addWidget(self.canvas)
         self.view_tabs.addTab(pw, "Plots")
@@ -177,6 +195,34 @@ class MainWindow(QMainWindow):
         self.plotter.add_text("Open a STEP file  (File > Open STEP)", font_size=12, color="gray")
 
     # ------------------------------------------------------------------ #
+    def _on_pick(self, event):
+        """Legend click: hide / show a channel; double-click: show only this one / all."""
+        leg = next((ax.get_legend() for ax in self.fig.axes
+                    if event.artist in getattr(ax.get_legend(), "_channels", {})), None)
+        if leg is None:
+            return
+        chans = leg._channels
+        artist = chans[event.artist][0]
+        entries = {c[0]: c for c in chans.values()}          # one entry per channel
+
+        def show(a, on):
+            a.set_visible(on)
+            _, lh, txt = entries[a]
+            lh.set_alpha(1.0 if on else 0.2)
+            txt.set_alpha(1.0 if on else 0.35)
+
+        if event.mouseevent.dblclick:
+            show(artist, not artist.get_visible())           # undo the toggle of the first click
+            alone = artist.get_visible() and not any(a.get_visible() for a in entries if a is not artist)
+            for a in entries:
+                show(a, alone or a is artist)
+        else:
+            show(artist, not artist.get_visible())
+        ax = next(ax for ax in self.fig.axes if ax.get_legend() is leg)
+        ax.relim(visible_only=True)
+        ax.autoscale_view(scalex=False)
+        self.canvas.draw_idle()
+
     def _scroll(self, w, title):
         sa = QScrollArea()
         sa.setWidgetResizable(True)
@@ -883,7 +929,7 @@ class MainWindow(QMainWindow):
         ax.set_ylabel("|θ / M| [rad/(N·m)]")
         ax.set_title(f"Receptance for a unit torque on inertia {self.sp_frf_node.value()}")
         ax.grid(True, which="both", alpha=0.3)
-        ax.legend(fontsize=7, ncol=4)
+        interactive_legend(ax, fontsize=7, ncol=4)
         ax2 = self.fig.add_subplot(212, sharex=ax)
         dH = np.abs(np.diff(H, axis=0) * m.k[:, None])
         for i in range(m.n - 1):
@@ -891,7 +937,7 @@ class MainWindow(QMainWindow):
         ax2.set_xlabel("frequency [Hz]")
         ax2.set_ylabel("|spring torque / M| [-]")
         ax2.grid(True, which="both", alpha=0.3)
-        ax2.legend(fontsize=7, ncol=4)
+        interactive_legend(ax2, fontsize=7, ncol=4)
         self.canvas.draw()
         self.view_tabs.setCurrentIndex(1)
 
@@ -1061,7 +1107,7 @@ class MainWindow(QMainWindow):
         ax.set_ylabel("rotation [deg]")
         ax.set_title(f"Static torsion, T = {r.settings.torque:g} N·m")
         ax.grid(True, alpha=0.3)
-        ax.legend(fontsize=8)
+        interactive_legend(ax, fontsize=8)
         ax2 = self.fig.add_subplot(212)
         xm = (r.s_mid - geo.s_min) * 1e3
         centers = 0.5 * (xm[1:] + xm[:-1])
@@ -1088,7 +1134,7 @@ class MainWindow(QMainWindow):
         ax.set_ylabel("relative rotation [-]")
         ax.set_title("Mode shapes")
         ax.grid(True, alpha=0.3)
-        ax.legend(fontsize=8)
+        interactive_legend(ax, fontsize=8)
         self.canvas.draw()
         self.view_tabs.setCurrentIndex(1)
 
@@ -1114,7 +1160,7 @@ class MainWindow(QMainWindow):
         ax.set_xlabel("time [s]")
         ax.set_ylabel(ylabel)
         ax.grid(True, alpha=0.3)
-        ax.legend(fontsize=7, ncol=4)
+        interactive_legend(ax, fontsize=7, ncol=4)
         self.canvas.draw()
         self.view_tabs.setCurrentIndex(1)
 
